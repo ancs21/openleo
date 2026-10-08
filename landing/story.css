@@ -1,0 +1,16 @@
+@import "../web/styles/theme.css";
+/* The pictures are the app's own components: build their classes too. */
+@source "../web";
+
+/* On top of the app's theme: the page sits in a column framed by fine diagonal lines. */
+html { scroll-behavior: smooth; }
+.frame { background: var(--canvas) repeating-linear-gradient(135deg, transparent 0 7px, var(--line) 7px 8px); }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+/* Privacy and Terms pages. */
+.legal p, .legal li { font-size: 15px; line-height: 1.7; color: var(--ink-2); }
+.legal h2 { margin-top: 1rem; font-size: 19px; font-weight: 600; color: var(--ink); }
+.legal ul { display: flex; flex-direction: column; gap: 0.5rem; padding-left: 1.25rem; list-style: disc; }
+.legal ol { display: flex; flex-direction: column; gap: 0.5rem; padding-left: 1.25rem; list-style: decimal; }
+.legal pre { overflow-x: auto; border-radius: var(--radius-control); background: var(--inset); padding: 0.75rem 1rem; font-size: 13px; line-height: 1.6; color: var(--ink); }
+.legal p a, .legal li a { text-decoration: underline; text-underline-offset: 2px; }
+.legal code { font-size: 13px; }

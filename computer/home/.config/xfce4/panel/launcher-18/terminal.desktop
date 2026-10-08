@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Terminal
+Exec=xfce4-terminal
+Icon=org.xfce.terminalemulator
+Terminal=false
+StartupNotify=true

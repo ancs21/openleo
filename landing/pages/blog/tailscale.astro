@@ -1,0 +1,42 @@
+---
+import Page from "../../Page.astro";
+---
+<Page title="Use OpenLeo from anywhere with Tailscale · OpenLeo" description="Open your OpenLeo boards on your phone or laptop, wherever you are, with Tailscale." current="blog" base="../">
+<p class="text-[13px] text-ink-3"><a href="../blog" class="underline underline-offset-2">Blog</a> · 9 October 2026</p>
+<h1 class="text-[36px] leading-tight font-semibold tracking-[-0.03em]">Use OpenLeo from anywhere with Tailscale</h1>
+<p>OpenLeo runs on one computer, say the Mac on your desk, and only that computer can open it. That keeps your boards and your ChatGPT sign-in private. But your agents keep working when you leave, and you may want to check on them from your phone.</p>
+<p>Tailscale connects your own devices in a private network, wherever they are. OpenLeo has a switch for it: nothing is opened to the internet, and only devices signed in to your Tailscale account can reach OpenLeo. Tailscale is free for personal use.</p>
+
+<h2>What you need</h2>
+<ul>
+<li>OpenLeo on the computer that will run it, the desktop app or started from source.</li>
+<li><a href="https://tailscale.com/download">Tailscale</a> on that computer and on each phone or laptop you want to use, all signed in to the same Tailscale account.</li>
+</ul>
+
+<h2>1. Turn it on in OpenLeo</h2>
+<p>On the computer that runs OpenLeo, click your account button at the top right and turn on <b>Open on your other devices</b>. OpenLeo asks Tailscale to share it, and shows its new address, like <code>https://my-mac.tail1234.ts.net:3443</code>.</p>
+<p>The first time, Tailscale may ask you to allow sharing on your network. OpenLeo shows the link: open it, allow it, and turn the switch on again.</p>
+
+<h2>2. Open it on your phone</h2>
+<p>With Tailscale on, open that address and sign in with ChatGPT. Add it to your home screen to open it like an app.</p>
+
+<h2>How it stays private</h2>
+<ul>
+<li>OpenLeo still listens only on its own computer. Tailscale Serve gives it an HTTPS address and passes visits from your devices to it, so your sign-in never crosses the network in the clear.</li>
+<li>Only devices signed in to your Tailscale network can open the address. It isn't on the public internet.</li>
+<li>Setting up the agents' computer and changing this switch stay on the computer that runs OpenLeo.</li>
+</ul>
+
+<h2>Good to know</h2>
+<ul>
+<li><b>Keep the computer awake.</b> If it sleeps, OpenLeo and your agents pause. On a Mac, turn on <b>Prevent automatic sleeping when the display is off</b> in Battery or Energy settings.</li>
+<li><b>Watching agents work.</b> On other devices you see each board's screen as the agents work. Taking over the live desktop works on the computer itself, or anywhere when you use cloud computers.</li>
+<li><b>Other people.</b> Anyone you share your Tailscale network with can open OpenLeo. Each ChatGPT account that signs in gets its own boards, and the first account to sign in is the owner.</li>
+<li><b>Use Serve, not Funnel.</b> Tailscale Funnel puts a service on the public internet. OpenLeo uses Serve, and your OpenLeo shouldn't be public.</li>
+</ul>
+
+<h2>Turn it off</h2>
+<p>Turn off <b>Open on your other devices</b> in the account menu. The address stops working right away.</p>
+
+<p class="mt-8 flex flex-wrap gap-4 border-t border-dashed border-line pt-6 text-[13px] text-ink-3"><a href="../">Home</a><a href="../download">Download</a><a href="../blog">Blog</a><a href="../changelog">Changelog</a><a href="../privacy">Privacy</a><a href="../terms">Terms</a></p>
+</Page>

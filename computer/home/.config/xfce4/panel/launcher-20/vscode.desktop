@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Visual Studio Code
+Exec=/usr/bin/code --no-sandbox %F
+Icon=vscode
+Terminal=false
+StartupNotify=true

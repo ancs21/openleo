@@ -1,0 +1,120 @@
+# Builds the desktop app on each OS it supports (Electrobun builds only for the machine it runs on).
+# Run it by hand from the Actions tab (all systems or one, optionally pausing for SSH), or push a tag like v0.1.0
+# to also attach the builds to a release.
+name: Desktop app
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: Build for
+        type: choice
+        options: [all, macos-arm64, linux-x64, linux-arm64, windows-x64]
+        default: all
+      debug:
+        description: Pause at the end for SSH (tmate)
+        type: boolean
+        default: false
+      rdp:
+        description: "Windows: pause for Remote Desktop with the app unpacked (up to 45 min)"
+        type: boolean
+        default: false
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        env:
+          ONLY: ${{ inputs.only || 'all' }}
+        run: |
+          all='[{"name":"macos-arm64","os":"macos-latest"},{"name":"linux-x64","os":"ubuntu-24.04"},{"name":"linux-arm64","os":"ubuntu-24.04-arm"},{"name":"windows-x64","os":"windows-latest"}]'
+          echo "matrix=$(jq -c --arg only "$ONLY" 'map(select($only == "all" or .name == $only))' <<< "$all")" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      MAC_SIGNING: ${{ secrets.MAC_CERT_P12 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      # macOS signing and notarization, once these secrets are set (unsigned builds otherwise):
+      #   MAC_CERT_P12 (the Developer ID Application certificate exported as .p12, base64), MAC_CERT_PASSWORD,
+      #   MAC_DEVELOPER_ID ("Developer ID Application: Name (TEAMID)"),
+      #   APPLE_API_KEY_P8 (an App Store Connect API key's .p8 contents), APPLE_API_KEY_ID, APPLE_API_ISSUER.
+      - name: Signing certificate (macOS)
+        if: runner.os == 'macOS' && env.MAC_SIGNING == 'true'
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.MAC_CERT_P12 }}
+          p12-password: ${{ secrets.MAC_CERT_PASSWORD }}
+      - name: Notarization key (macOS)
+        if: runner.os == 'macOS' && env.MAC_SIGNING == 'true'
+        env:
+          KEY: ${{ secrets.APPLE_API_KEY_P8 }}
+          DEVELOPER_ID: ${{ secrets.MAC_DEVELOPER_ID }}
+          KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          printf '%s' "$KEY" > "$RUNNER_TEMP/notary.p8"
+          { echo "ELECTROBUN_DEVELOPER_ID=$DEVELOPER_ID"; echo "ELECTROBUN_APPLEAPIKEYPATH=$RUNNER_TEMP/notary.p8"
+            echo "ELECTROBUN_APPLEAPIKEY=$KEY_ID"; echo "ELECTROBUN_APPLEAPIISSUER=$ISSUER"; } >> "$GITHUB_ENV"
+      - name: Linux libraries (GTK, WebKit, tray)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+      - run: bun install --frozen-lockfile
+      - run: bun run app:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenLeo-${{ matrix.name }}
+          path: artifacts/*
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+      # Remote Desktop into the Windows machine through a Cloudflare quick tunnel. On your Mac:
+      #   brew install cloudflared
+      #   cloudflared access rdp --hostname <host from the log> --url localhost:3390
+      # then connect Windows App to localhost:3390 as runneradmin with the password from the log.
+      # Anyone who can read this log can connect, so it only runs while the repo is private. End it with C:\continue or cancel.
+      - name: Remote Desktop (rdp; create C:\continue to finish)
+        if: ${{ always() && inputs.rdp && runner.os == 'Windows' && github.event.repository.private }}
+        timeout-minutes: 45
+        shell: pwsh
+        run: |
+          Set-ItemProperty 'HKLM:\System\CurrentControlSet\Control\Terminal Server' fDenyTSConnections 0
+          Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'
+          $pw = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 20 | ForEach-Object { [char]$_ })
+          net user runneradmin $pw | Out-Null
+          Expand-Archive artifacts\*-Setup.zip "$env:USERPROFILE\Desktop\OpenLeo" -Force -ErrorAction SilentlyContinue
+          Invoke-WebRequest https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile cloudflared.exe
+          Start-Process .\cloudflared.exe -ArgumentList 'tunnel','--url','rdp://localhost:3389' -RedirectStandardError tunnel.log -WindowStyle Hidden
+          $hostName = $null
+          for ($i = 0; $i -lt 60 -and -not $hostName; $i++) { Start-Sleep 2; $hostName = (Select-String -Path tunnel.log -Pattern '[a-z0-9-]+\.trycloudflare\.com' -ErrorAction SilentlyContinue | Select-Object -First 1).Matches.Value }
+          if (-not $hostName) { Get-Content tunnel.log; throw 'tunnel did not start' }
+          Write-Host "cloudflared access rdp --hostname $hostName --url localhost:3390"
+          Write-Host "user: runneradmin   password: $pw"
+          Write-Host "The app is unpacked on the Desktop (OpenLeo folder)."
+          while (-not (Test-Path C:\continue)) { Start-Sleep 10 }
+      - name: SSH in (debug; `touch continue` to finish)
+        if: ${{ always() && inputs.debug }}
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30
+        with:
+          # The connect link is printed in the run's log: fine while only you can read it (private repo).
+          # Once public, only SSH keys on your GitHub account can connect.
+          limit-access-to-actor: ${{ !github.event.repository.private }}

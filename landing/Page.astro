@@ -1,0 +1,15 @@
+---
+// Every page but the home page: the site's sidebar beside the page's text.
+import Layout from "./Layout.astro";
+import { Sidebar } from "./Sidebar";
+
+const { title, description, current, base = "./" } = Astro.props;
+---
+<Layout title={title} description={description}>
+<body class="frame min-h-screen text-ink">
+<div class="mx-auto flex min-h-screen max-w-[1180px] bg-page shadow-[0_0_0_1px_var(--line)] max-lg:flex-col">
+  <div class="shrink-0 lg:w-[270px]"><Sidebar client:only="react" base={base} current={current} /></div>
+  <main class="legal flex max-w-[800px] min-w-0 flex-1 flex-col gap-4 px-6 py-14 sm:px-10"><slot /></main>
+</div>
+</body>
+</Layout>

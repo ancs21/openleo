@@ -1,0 +1,32 @@
+---
+// The shared <head> for every page: the app's theme, fonts and its saved light or dark choice.
+import "./story.css";
+import logo from "../web/assets/logo.svg?url";
+
+const { title, description, mono = false } = Astro.props;
+const fonts = `https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700${mono ? "&family=JetBrains+Mono:wght@400;500" : ""}&display=swap`;
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={new URL(Astro.url.pathname.replace(/(index)?\.html$/, ""), Astro.site ?? Astro.url)} />
+<link rel="icon" type="image/svg+xml" href={logo} />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href={fonts} />
+<script is:inline>
+  // The app's theme: the saved choice, else the system's (same as web/index.html).
+  (function () {
+    var t; try { t = localStorage.getItem("openleo-theme"); } catch (e) {}
+    var dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.classList.toggle("dark", dark);
+    document.documentElement.style.colorScheme = dark ? "dark" : "light";
+  })();
+</script>
+</head>
+<slot />
+</html>

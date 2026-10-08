@@ -1,0 +1,124 @@
+/* Design tokens (colors, shadows, radii, fonts, motion) as a Tailwind v4 theme. */
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --page: oklch(98.5% .001 286.376);
+  --canvas: oklch(96.1% .002 247.84);
+  --surface: oklch(100% 0 0);
+  --inset: oklch(97.9% .002 247.839);
+  --hover: oklch(97% .002 247.839);
+  --hover-2: oklch(93.3% .003 247.86);
+  --ink: oklch(24.7% .006 258.361);
+  --ink-2: oklch(50.6% .01 264.477);
+  --ink-3: oklch(69.5% .009 264.505);
+  --line: oklch(94.6% .003 264.542);
+  --line-strong: oklch(91.2% .005 258.326);
+  --line-soft: oklch(96.6% .002 264.542);
+  --field: oklch(96.1% .001 286.375);
+  --accent: oklch(62.6% .205 254.947);
+  --accent-ink: oklch(55.6% .187 255.617);
+  --accent-tint: oklch(96% .019 252.878);
+  --green: oklch(60.3% .155 150.883);
+  --green-tint: oklch(95.8% .017 159.118);
+  --orange: oklch(68.9% .179 49.902);
+  --orange-tint: oklch(96.4% .021 67.581);
+  --red: oklch(62.1% .192 23.042);
+  --red-tint: oklch(95.6% .017 17.462);
+  --sh-hairline: 0 0 0 1px var(--line);
+  --sh-btn: 0 0 0 1px var(--line-strong), 0 1px 2px 0 rgb(0 0 0 / .05);
+  --sh-card: 0 0 0 1px var(--line), 0 1px 3px 0 rgb(0 0 0 / .1), 0 1px 2px -1px rgb(0 0 0 / .1);
+  --sh-raised: 0 0 0 1px var(--line), 0 4px 6px -1px rgb(0 0 0 / .1), 0 2px 4px -2px rgb(0 0 0 / .1);
+  --sh-overlay: 0 0 0 1px var(--line), 0 10px 15px -3px rgb(0 0 0 / .1), 0 4px 6px -4px rgb(0 0 0 / .1);
+  --sh-inset-field: inset 0 1px 2px oklch(0% 0 0 / .12);
+}
+
+.dark {
+  --page: oklch(20.9% .004 264.477);
+  --canvas: oklch(23.1% .004 264.487);
+  --surface: oklch(26% .006 271.191);
+  --inset: oklch(24.3% .004 264.492);
+  --hover: oklch(28.9% .006 271.22);
+  --hover-2: oklch(31.8% .007 274.747);
+  --ink: oklch(96.4% .002 247.839);
+  --ink-2: oklch(73.1% .008 260.731);
+  --ink-3: oklch(54.1% .01 264.484);
+  --line: oklch(30.8% .006 258.354);
+  --line-strong: oklch(35.6% .007 264.474);
+  --line-soft: oklch(27.8% .006 258.354);
+  --field: oklch(29.3% .006 271.223);
+  --accent: oklch(68% .173 253.301);
+  --accent-ink: oklch(78.8% .113 248.33);
+  --accent-tint: oklch(68% .173 253.301 / .16);
+  --green: oklch(70.5% .154 153.814);
+  --green-tint: oklch(70.5% .154 153.814 / .14);
+  --orange: oklch(74.6% .156 55.642);
+  --orange-tint: oklch(74.6% .156 55.642 / .14);
+  --red: oklch(66.6% .18 21.433);
+  --red-tint: oklch(66.6% .18 21.433 / .14);
+  --sh-btn: 0 0 0 1px oklch(100% 0 0 / .1), 0 1px 2px oklch(0% 0 0 / .3);
+  --sh-card: 0 0 0 1px oklch(100% 0 0 / .11), 0 1px 2px oklch(0% 0 0 / .2), 0 2px 6px oklch(0% 0 0 / .2);
+  --sh-raised: 0 0 0 1px oklch(100% 0 0 / .13), 0 2px 10px oklch(0% 0 0 / .22);
+  --sh-overlay: 0 0 0 1px oklch(100% 0 0 / .15), 0 8px 28px oklch(0% 0 0 / .34);
+  --sh-inset-field: inset 0 1px 2px oklch(0% 0 0 / .4);
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-inset: var(--inset);
+  --color-hover: var(--hover);
+  --color-hover-2: var(--hover-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-line-soft: var(--line-soft);
+  --color-field: var(--field);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-tint: var(--accent-tint);
+  --color-green: var(--green);
+  --color-green-tint: var(--green-tint);
+  --color-orange: var(--orange);
+  --color-orange-tint: var(--orange-tint);
+  --color-red: var(--red);
+  --color-red-tint: var(--red-tint);
+  --shadow-hairline: var(--sh-hairline);
+  --shadow-btn: var(--sh-btn);
+  --shadow-card: var(--sh-card);
+  --shadow-raised: var(--sh-raised);
+  --shadow-overlay: var(--sh-overlay);
+  --shadow-inset-field: var(--sh-inset-field);
+  --radius-chip: 6px;
+  --radius-control: 8px;
+  --radius-card: 10px;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  /* motion → animate-* utilities */
+  --ease-out-expo: cubic-bezier(0.23, 1, 0.32, 1);
+  --animate-pop-in: pop-in 180ms var(--ease-out-expo) backwards; /* backwards: no transform stays behind, so fixed menus inside a dialog line up */
+  --animate-fade-in: fade-in 250ms ease-out both;
+  --animate-fade-up: fade-up 320ms var(--ease-out-expo) both;
+  --animate-slide-in-right: slide-in-right 260ms var(--ease-out-expo) both;
+  --animate-pulse-dot: records-pulse 1.1s ease-in-out infinite;
+  --animate-spin-fast: spin 700ms linear infinite;
+}
+
+@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes fade-up { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes pop-in { from { opacity: 0; transform: scale(.95) } to { opacity: 1; transform: scale(1) } }
+@keyframes shimmer-text { from { background-position: 150% } to { background-position: -50% } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}
+
+html, body, #root { height: 100%; }
+body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+dialog::backdrop { background: oklch(0% 0 0 / .4); }
+@keyframes eq-bounce { 0%, 100% { transform: scaleY(.35) } 50% { transform: scaleY(1) } }
+@keyframes slide-in-right { from { opacity: 0; transform: translateX(28px) } to { opacity: 1; transform: translateX(0) } }
