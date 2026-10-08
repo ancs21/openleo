@@ -1,0 +1,31 @@
+---
+import Layout from "../Layout.astro";
+import logo from "../../web/assets/logo.svg?url";
+---
+<Layout title="Privacy · OpenLeo" description="What OpenLeo does with your data.">
+<body class="frame min-h-screen text-ink">
+<main class="legal mx-auto flex min-h-screen max-w-[760px] flex-col gap-4 bg-page px-6 py-14 shadow-[0_0_0_1px_var(--line)] sm:px-10">
+<a href="./" class="flex items-center gap-2 text-[15px] font-semibold"><img src={logo} alt="" class="size-7" />OpenLeo</a>
+<h1 class="mt-6 text-[36px] leading-tight font-semibold tracking-[-0.03em]">Privacy</h1>
+<p class="text-[13px] text-ink-3">Last updated 7 October 2026</p>
+<p>OpenLeo is an app that runs on your own Mac. We don't run a server that your boards, cards or chats pass through, and the app doesn't send us analytics or crash reports.</p>
+<h2>What stays on your Mac</h2>
+<p>Your boards, cards, agents, chats and settings are saved in <code>~/Library/Application Support/si.openleo.app/</code>. Sign-in tokens and app keys are kept in a file there that only your user account can read. Delete that folder and they're gone.</p>
+<p>Each board's computer runs in Docker on your Mac. If you choose to run computers in the cloud instead, that provider receives what the agents do on them.</p>
+<h2>What goes to other services</h2>
+<p>OpenLeo talks to other services only to do what you ask:</p>
+<ul>
+<li>When you sign in with ChatGPT, you do it on OpenAI's site. After that, your messages, your cards and what agents see on their computer go to OpenAI's models, and OpenAI's privacy policy covers what happens there.</li>
+<li>Agents browse the web like a person would, so the sites they open see those visits.</li>
+<li>If you connect an app, the agent sends it what the task needs.</li>
+<li>If you pick a photo background, the app searches Unsplash for it.</li>
+<li>To show a website's icon, the app fetches it from that website.</li>
+</ul>
+<h2>This website</h2>
+<p>This page and the home page don't use cookies or tracking. They load fonts from Google Fonts and one image from Unsplash, so those services see your visit. Your light or dark choice is saved in your browser only.</p>
+<h2>Changes</h2>
+<p>If this changes, we'll update this page and the date at the top.</p>
+<p class="mt-8 flex flex-wrap gap-4 border-t border-dashed border-line pt-6 text-[13px] text-ink-3"><a href="./">Home</a><a href="./blog">Blog</a><a href="./changelog">Changelog</a><a href="./privacy">Privacy</a><a href="./terms">Terms</a></p>
+</main>
+</body>
+</Layout>

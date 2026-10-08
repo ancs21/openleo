@@ -1,0 +1,50 @@
+{
+  "name": "openleo",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@astrojs/react": "^7.0.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/bun": "latest",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "astro": "^7.3.7",
+    "bun-plugin-tailwind": "^0.1.2",
+    "electrobun": "2.0.2",
+    "lightningcss": "1.33.0",
+    "tailwindcss": "^4.3.3"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  },
+  "dependencies": {
+    "@atlaskit/pragmatic-drag-and-drop": "^4.0.0",
+    "@atlaskit/pragmatic-drag-and-drop-auto-scroll": "^3.2.1",
+    "@earendil-works/pi-agent-core": "^1.0.4",
+    "@earendil-works/pi-ai": "^1.0.4",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@paper-design/shaders-react": "^0.0.81",
+    "@trycua/cua": "^0.4.1",
+    "glimm": "^0.3.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-markdown": "^10.1.0",
+    "react-router": "^8.4.0",
+    "remark-gfm": "^4.0.1",
+    "uqr": "^0.1.3",
+    "zustand": "^5.0.15"
+  },
+  "scripts": {
+    "dev": "bun --hot server/main.ts",
+    "start": "NODE_ENV=production bun server/main.ts",
+    "app:server": "bun scripts/build-server.ts",
+    "app:dev": "bun run app:server && electrobun dev",
+    "app:build": "bun run app:server && electrobun build --env=stable",
+    "app:icons": "bun scripts/build-icons.ts",
+    "landing": "cd landing && bun --bun astro dev --port 3100",
+    "landing:build": "cd landing && bun --bun astro build",
+    "computer:build": "docker build --pull -t openleo-computer computer",
+    "computer:build:apple": "container builder start --dns 1.1.1.1; container build --pull -t openleo-computer computer"
+  },
+  "license": "AGPL-3.0-only"
+}

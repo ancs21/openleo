@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Google Chrome
+Exec=/usr/local/bin/google-chrome %U
+Icon=google-chrome
+Terminal=false
+StartupNotify=true

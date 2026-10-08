@@ -1,0 +1,44 @@
+# Builds the agents' computer (computer/) for both chips on native runners and publishes one image for both:
+# ghcr.io/<owner>/openleo-computer. Docker picks the right one: amd64 on Intel/AMD PCs (Windows, Linux, Intel Macs),
+# arm64 on Apple silicon and ARM PCs. Runs when computer/ changes, or by hand from the Actions tab.
+name: Computer image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["computer/**", ".github/workflows/computer.yml"]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/openleo-computer
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - { arch: amd64, os: ubuntu-24.04 }
+          - { arch: arm64, os: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - run: docker build --pull -t "$IMAGE:${{ matrix.arch }}" computer && docker push "$IMAGE:${{ matrix.arch }}"
+      - name: Check the chip
+        run: test "$(docker image inspect -f '{{.Architecture}}' "$IMAGE:${{ matrix.arch }}")" = "${{ matrix.arch }}"
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - uses: docker/setup-buildx-action@v3
+      - run: |
+          docker buildx imagetools create -t "$IMAGE:latest" -t "$IMAGE:${GITHUB_SHA::7}" "$IMAGE:amd64" "$IMAGE:arm64"
+          docker buildx imagetools inspect "$IMAGE:latest"
