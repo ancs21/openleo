@@ -8,7 +8,7 @@
 
 AI agents on a board, no code. Each board has its own computer where its agents work, and agents run on your ChatGPT plan.
 
-[![OpenLeo in 20 seconds](landing/intro-poster.jpg)](landing/intro.mp4)
+[![OpenLeo in 30 seconds](landing/intro-poster.jpg)](landing/intro.mp4)
 
 ## Run
 
@@ -38,8 +38,9 @@ Everything else is in [`.env.example`](.env.example).
 
 OpenLeo listens on `127.0.0.1` only, and won't listen on the network without HTTPS.
 
-To use it on your own phone or laptop, turn on **Open on your other devices** in the account menu: it shares OpenLeo
-through Tailscale Serve, so only devices in your Tailscale network can reach it (guide: openleo.si/blog/tailscale).
+To use it on your own phone or laptop, turn on **Open on your other devices** in the account menu: OpenLeo serves
+HTTPS on this computer's Tailscale address, so only devices in your Tailscale network can reach it, and your own devices
+come straight in ([guide](https://leooi.com/blog/tailscale)).
 
 To host it for others, put it behind an HTTPS proxy:
 
