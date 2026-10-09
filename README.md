@@ -6,9 +6,21 @@
 
 > **Work in progress.** Expect rough edges; back up your data before updating.
 
-AI agents on a board, no code. Each board has its own computer where its agents work, and agents run on your ChatGPT plan.
+A to-do board like Trello, where AI agents do the cards on their own computer. You sign in with ChatGPT, like Codex, so agents run on the plan you already have. No code needed.
 
 [![OpenLeo in 30 seconds](landing/intro-poster.jpg)](landing/intro.mp4)
+
+Each list can have its own agent. Drop a card in Research and the researcher picks it up; drop one in Writing and the writer does:
+
+![A café-opening board with five lists: Inbox, Research, Writing, Checks and Done. Agents are working on some cards and have finished others](docs/board.jpg)
+
+The same board as a table, with your own fields like priority, due date and budget:
+
+![The board as a table with Priority, Due and Budget columns](docs/table.jpg)
+
+When an agent finishes, its answer stays on the card:
+
+![A card with the agent's result: a price table from three shops](docs/card-result.jpg)
 
 ## Run
 

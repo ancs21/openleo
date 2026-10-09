@@ -326,7 +326,7 @@ export function Landing({ initialStory = "sales" }: { initialStory?: string }) {
           <section id="top" className={`${section} flex flex-col gap-8 pt-16`}>
             <div className="flex flex-col gap-5">
               <h1 className="max-w-[640px] text-[clamp(36px,4.4vw,54px)] leading-[1.04] font-semibold tracking-[-0.035em]">Your to-do list, done by agents.</h1>
-              <p className="max-w-[600px] text-[17px] leading-relaxed text-ink-2">OpenLeo is a board where AI agents <Highlight>pick up your cards</Highlight>, work on <Highlight>their own computer</Highlight> and hand back the result. You sign in with ChatGPT, and you don't need API keys or code.</p>
+              <p className="max-w-[600px] text-[17px] leading-relaxed text-ink-2">OpenLeo is a to-do board like Trello, where AI agents <Highlight>pick up your cards</Highlight>, work on <Highlight>their own computer</Highlight> and hand back the result. You sign in with ChatGPT, the same way you do for Codex, and you don't need API keys or code.</p>
               <div className="flex flex-wrap gap-2 lg:hidden"><DownloadButton big /><GitHubButton /></div>
             </div>
             <video src={intro} poster={introPoster} autoPlay muted loop playsInline controls preload="metadata" aria-label="OpenLeo in 30 seconds"
