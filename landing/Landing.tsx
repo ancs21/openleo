@@ -329,7 +329,7 @@ export function Landing({ initialStory = "sales" }: { initialStory?: string }) {
               <p className="max-w-[600px] text-[17px] leading-relaxed text-ink-2">OpenLeo is a board where AI agents <Highlight>pick up your cards</Highlight>, work on <Highlight>their own computer</Highlight> and hand back the result. You sign in with ChatGPT, and you don't need API keys or code.</p>
               <div className="flex flex-wrap gap-2 lg:hidden"><DownloadButton big /><GitHubButton /></div>
             </div>
-            <video src={intro} poster={introPoster} autoPlay muted loop playsInline controls preload="metadata" aria-label="OpenLeo in 20 seconds"
+            <video src={intro} poster={introPoster} autoPlay muted loop playsInline controls preload="metadata" aria-label="OpenLeo in 30 seconds"
               className="aspect-video w-full rounded-card border border-line bg-[#141416]" />
             <div aria-label="Key features" className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
               {KEY_FEATURES.map((f) => (

@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-The OpenLeo marketing site (home, Download, Changelog, Blog, Privacy, Terms), built with Astro and deployed as static files to Cloudflare Pages (`openleo.pages.dev`, site URL `https://openleo.si`). The repo-root `CLAUDE.md` still applies.
+The OpenLeo marketing site (home, Download, Changelog, Blog, Privacy, Terms), built with Astro and deployed as static files to a Cloudflare Worker (`landing/wrangler.jsonc`) at `https://leooi.com`. The repo-root `CLAUDE.md` still applies.
 
 ## Commands
 
@@ -12,7 +12,7 @@ Run from the repo root:
 bun run landing         # astro dev on port 3100
 bun run landing:build   # static build into landing/dist
 bun test landing        # tests (landing.test.tsx)
-bunx wrangler pages deploy landing/dist --project-name openleo --branch main   # deploy after a build
+cd landing && bunx wrangler deploy   # deploy after a build: leooi.com and www (wrangler.jsonc)
 ```
 
 - Astro runs under Bun (`bun --bun astro`). Under Node the prerender fails on `@atlaskit/pragmatic-drag-and-drop`'s directory imports.

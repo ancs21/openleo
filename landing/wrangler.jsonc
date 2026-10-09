@@ -1,0 +1,10 @@
+// Serves the built site (dist/) from Cloudflare at leooi.com. Deploy after a build: bunx wrangler deploy
+{
+  "name": "openleo-landing",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "dist" },
+  "routes": [
+    { "pattern": "leooi.com", "custom_domain": true },
+    { "pattern": "www.leooi.com", "custom_domain": true }
+  ]
+}

@@ -30,7 +30,7 @@ const oldSafariCss = {
 };
 
 export default defineConfig({
-  site: "https://openleo.si",
+  site: "https://leooi.com",
   srcDir: ".",
   outDir: "dist",
   build: { format: "file" }, // privacy.html, terms.html: the pages link to ./privacy and ./terms
