@@ -21,9 +21,8 @@ import { SoundToggle } from "../../components/SoundToggle";
 import { AgentIcon } from "../../components/AgentIcon";
 import { ScreenDialog } from "../sandbox/AgentScreen";
 
-const pill = "inline-flex h-8 items-center gap-1.5 rounded-full bg-surface/85 px-3 text-[13px] font-medium text-ink shadow-btn backdrop-blur-xl transition-colors duration-100 hover:bg-surface";
+const pill = "inline-flex h-8 shrink-0 items-center whitespace-nowrap gap-1.5 rounded-full bg-surface/85 px-3 text-[13px] font-medium text-ink shadow-btn backdrop-blur-xl transition-colors duration-100 hover:bg-surface";
 
-/** Switch boards, make a new one, rename or delete the current one. */
 function BoardSwitcher({ wallpaper }: { wallpaper: ReturnType<typeof useWallpaper> }) {
   const { boards, boardId, board, loadBoards, createBoard, deleteBoard } = useBoard();
   const navigate = useNavigate();
@@ -90,8 +89,6 @@ function BoardSwitcher({ wallpaper }: { wallpaper: ReturnType<typeof useWallpape
   );
 }
 
-/** Your agents: open one to edit or chat, or make a new one. */
-/** The board's agents (agents belong to a board), and New agent. */
 function AgentsMenu() {
   const agents = useApp((s) => s.agents);
   const boardId = useBoard((s) => s.boardId);
@@ -109,7 +106,6 @@ function AgentsMenu() {
   );
 }
 
-/** This board's computer: status dot; opens it full size when running, starts or retries it otherwise. */
 function ComputerButton() {
   const { computer, boardId, board, startComputer } = useBoard();
   const openViewer = useApp((s) => s.openViewer);
@@ -134,7 +130,6 @@ function ComputerButton() {
   );
 }
 
-/** Account: the ChatGPT sign-in, opening OpenLeo on your other devices, the theme and sounds. */
 function AccountMenu({ email }: { email?: string }) {
   const [open, setOpen] = useState(false);
   return (
@@ -155,7 +150,6 @@ function AccountMenu({ email }: { email?: string }) {
   );
 }
 
-/** Pill top bar: logo, board switcher, agents, the board's computer, ⌘K search, account. */
 export type BoardView = "board" | "table";
 
 export function BoardTopBar({ query, onQuery, wallpaper, view, onView, onLeo }: {
@@ -184,12 +178,12 @@ export function BoardTopBar({ query, onQuery, wallpaper, view, onView, onLeo }: 
           </button>
         ))}
       </div>
-      <div className="mx-auto flex h-8 w-full max-w-[460px] items-center gap-2 rounded-full bg-surface/85 px-3 text-ink-3 shadow-btn backdrop-blur-xl focus-within:bg-surface">
+      <div className="mx-auto flex h-8 w-full min-w-0 max-w-[460px] items-center gap-2 rounded-full bg-surface/85 px-3 text-ink-3 shadow-btn backdrop-blur-xl focus-within:bg-surface">
         <Icon>{glyphs.search}</Icon>
         <input ref={search} value={query} onChange={(e) => onQuery(e.target.value)} placeholder="Search" aria-label="Search cards"
           onKeyDown={(e) => { if (e.key === "Escape") { onQuery(""); e.currentTarget.blur(); } }}
           className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-3" />
-        <kbd className="font-sans text-[11px] text-ink-3">⌘K</kbd>
+        <kbd className="font-sans text-[11px] text-ink-3 max-sm:hidden">⌘K</kbd>
       </div>
       <button type="button" onClick={onLeo} title="Leo manages this board for you" className={`${pill} shrink-0`}>
         <Logo className="size-4" />Ask Leo

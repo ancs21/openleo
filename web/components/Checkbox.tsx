@@ -1,5 +1,4 @@
-// A real, visually hidden <input> (keyboard + screen readers)
-// over an 18px box that fills with the accent when checked. Place inside a <label> to make the row clickable.
+// A visually hidden real <input> (keyboard + screen readers) over a drawn box. Put it in a <label> to make the row clickable.
 export function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: () => void; label?: string }) {
   return (
     <span className="group/cb relative inline-flex size-6 shrink-0 items-center justify-center">

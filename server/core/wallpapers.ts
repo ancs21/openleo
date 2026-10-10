@@ -1,5 +1,4 @@
-// Board wallpapers, the rules: which photos suit a theme, and the built-in photos used without an Unsplash key
-// (core/wallpapers.json: links and credits only; the images load from Unsplash's CDN). Searching Unsplash is in infra/unsplash.ts.
+// Wallpaper rules: which photos suit a theme, and built-in photos (links and credits only) used without an Unsplash key.
 import type { Wallpaper, WallpaperResults } from "../../shared/types";
 import BUILT_IN from "./wallpapers.json";
 
@@ -9,7 +8,6 @@ const UTM = "utm_source=openleo&utm_medium=referral";
 export const DEFAULT_QUERY = { dark: "night mountain landscape", light: "bright mountain lake landscape" } as const;
 export type Theme = keyof typeof DEFAULT_QUERY;
 
-/** Relative luminance (0 = black, 1 = white) of a #rrggbb colour. */
 export function luminance(hex: string) {
   const n = Number.parseInt(hex.replace("#", ""), 16);
   if (Number.isNaN(n)) return 0.5;
@@ -20,10 +18,7 @@ export function luminance(hex: string) {
   return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
 }
 
-/**
- * Target brightness per theme: dark-but-not-black for dark, bright-but-not-washed-out for light,
- * so translucent lists stay readable on top. Photos closest to the target come first.
- */
+/** Target brightness per theme, so translucent lists stay readable; photos closest to it come first. */
 export const TARGET_LUMINANCE = { dark: 0.06, light: 0.45 } as const;
 export const rankForTheme = <T extends { color: string }>(photos: T[], theme: Theme) =>
   [...photos].sort((a, b) => Math.abs(luminance(a.color) - TARGET_LUMINANCE[theme]) - Math.abs(luminance(b.color) - TARGET_LUMINANCE[theme]));

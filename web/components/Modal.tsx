@@ -1,10 +1,9 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Button } from "./Button";
 
-/** Native <dialog> modal, controlled by `open`. Buttons inside a form[method=dialog] close it. */
+/** Buttons inside a form[method=dialog] close it. */
 export function Modal({ open, onClose, title, children, actions, className = "w-[min(380px,calc(100vw-32px))] text-center" }: {
   open: boolean; onClose: () => void; title: string; children: ReactNode; actions: ReactNode;
-  /** width and alignment (a short centered message by default) */
   className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -23,7 +22,6 @@ export function Modal({ open, onClose, title, children, actions, className = "w-
   );
 }
 
-/** "Delete X?" confirmation: Cancel, or the red button that runs `onConfirm`. */
 export function Confirm({ open, onClose, title, message, confirmLabel, onConfirm }: {
   open: boolean; onClose: () => void; title: string; message: ReactNode; confirmLabel: string; onConfirm: () => void;
 }) {

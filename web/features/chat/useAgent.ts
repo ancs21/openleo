@@ -1,6 +1,4 @@
-// React hook over OpenLeo's SSE chat stream: history first, then live message parts.
-//   const agent = useAgent({ url: `/api/agents/${name}/${conversationId}` });
-//   agent.messages[].parts -> text | reasoning | dynamic-tool
+// Hook over the SSE chat stream: history first, then live message parts.
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { FilePart, Message, Part, ToolPart } from "../../../shared/types";
@@ -37,7 +35,6 @@ export function useAgent({ url }: { url?: string }) {
     return () => { ctrl.abort(); clearTimeout(poll.current); abort.current?.abort(); };
   }, [loadHistory]);
 
-  // Apply one stream event to the trailing assistant message.
   const apply = (e: any) =>
     setMessages((all) => {
       const last = all.at(-1)!;
@@ -122,7 +119,6 @@ export function useAgent({ url }: { url?: string }) {
     setStatus("ready");
     await loadHistory();
   }, [url, loadHistory]);
-  // Summarize older turns on the server now, then show the result.
   const compact = useCallback(async () => {
     if (!url) return;
     setError(undefined);

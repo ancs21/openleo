@@ -1,4 +1,4 @@
-// Signing in with ChatGPT. Any ChatGPT account may sign in and gets its own tenant (created, with its computers, on first sign-in).
+// ChatGPT sign-in. Any account may sign in and gets its own tenant on first sign-in.
 import { startComputers } from "../app/computers";
 import { PUBLIC_ORIGIN, SANDBOXED } from "../infra/config";
 import { startMcp } from "../infra/mcp";
@@ -15,8 +15,7 @@ export const authRoutes = {
     if (s) return Response.json({ email: s.email });
     return fromOwnersDevice(req) && ownerTenant() ? Response.json({}) : err(new Error("sign in first"), 401);
   },
-  // Public: the addresses sign-in may happen on (cookies are per host): OpenLeo's own, and its Tailscale address
-  // when shared there. Sign-in returns to the one it started from.
+  // Public. Cookies are per host, so list every address sign-in may start from.
   "/api/auth/config": () => Response.json({ origin: PUBLIC_ORIGIN, origins: [PUBLIC_ORIGIN, tailnetOrigin()].filter(Boolean) }),
   "/api/auth/chatgpt/login": {
     POST: limited(async (req) => {

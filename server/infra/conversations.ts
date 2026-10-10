@@ -1,6 +1,4 @@
-// Conversations on disk (<tenant>/conversations/<board>/<agent>/<id>.json), so history survives restarts and
-// reloads. Agents belong to a board, so their chats do too: the current board comes from inBoard().
-// Callers validate agent names and conversation ids before building paths.
+// Chats at <tenant>/conversations/<board>/<agent>/<id>.json. Callers validate agent names and ids before building paths.
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { currentBoard } from "./sandbox";
 import { dataDir } from "./tenant";

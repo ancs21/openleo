@@ -1,5 +1,4 @@
-// Opening OpenLeo on your phone or laptop through Tailscale: a private network of your own devices. Shown to this
-// computer's owner, on this computer; the server does the sharing (http/remote.ts). Your own devices come straight in.
+// Open OpenLeo on your own devices over Tailscale; shown only to this computer's owner.
 import { useEffect, useState } from "react";
 import { encode } from "uqr";
 import { Switch } from "../../components/Switch";

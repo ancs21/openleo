@@ -1,5 +1,4 @@
-// A board's agents and their chats, plus Leo's settings and drafting a new agent. Every board route here runs
-// inside the board in its URL: agents, their chats and skills belong to it.
+// A board's agents and their chats, Leo's settings, and drafting a new agent.
 import { EFFORTS, type Effort } from "../../shared/types";
 import { deleteDef, draftDef, listDefs, loadDef, NAME, saveDef } from "../app/agents";
 import { listBoards } from "../app/boards";
@@ -7,15 +6,15 @@ import { LEO } from "../app/leo";
 import { leoSettings, setLeoSettings } from "../infra/leo-settings";
 import { compactIfLong, compactNow, getSession, isBusy, liveAgent, retune, runningCount, skey, stopSession } from "../app/live-agents";
 import { agentSkills, syncIfRunning } from "../app/skills";
+import { chatRun } from "../app/tasks";
 import { searchSummary, toChatMessages } from "../core/history";
 import { loadConversation, saveConversation } from "../infra/conversations";
 import { checkRuns, checkStorage } from "../infra/limits";
-import { onWebSearch, resolveModel } from "../infra/runtime";
+import { lastText, onWebSearch, resolveModel } from "../infra/runtime";
 import { inBoard } from "../infra/sandbox";
 import { SANDBOXED } from "../infra/config";
 import { CONVERSATION, err, onBoard, parseImages, safe } from "./guard";
 
-/** Send a message and stream the reply as server-sent events: text, reasoning, tool calls and their results. */
 function chat(name: string, session: string, message: string, images: ReturnType<typeof parseImages> = []) {
   const agent = getSession(name, session);
   const key = skey(name, session);
@@ -47,21 +46,25 @@ function chat(name: string, session: string, message: string, images: ReturnType
         }
       });
       off = () => { offEvents(); offSearch(); };
+      const endRun = chatRun(session, name);
+      let failed: string | undefined;
       try {
         if (await compactIfLong(name, key, agent)) send({ type: "compacted" });
         await agent.prompt(message, images); // already inside the board (the route runs in it)
-        if (agent.state.errorMessage) send({ type: "error", message: agent.state.errorMessage });
+        failed = agent.state.errorMessage;
+        if (failed) send({ type: "error", message: failed });
       } catch (e) {
-        send({ type: "error", message: (e as Error).message });
+        failed = (e as Error).message;
+        send({ type: "error", message: failed });
       } finally {
         off();
+        endRun(failed, lastText(agent));
         void saveConversation(name, session, agent.state.messages);
         send({ type: "done" });
         if (!closed) ctrl.close();
       }
     },
-    // Closing or reloading the page only detaches: the run keeps going and the history shows it.
-    // Stopping is explicit (POST …/stop).
+    // Closing the page only detaches; the run keeps going until POST …/stop.
     cancel: () => { closed = true; off(); },
   });
   return new Response(stream, { headers: { "content-type": "text/event-stream", "cache-control": "no-cache" } });
@@ -76,7 +79,7 @@ export const agentRoutes = {
       return Response.json(await draftDef(description.slice(0, 4000), String(model)));
     }, 502),
   },
-  // Leo's model and thinking time (it isn't one of the user's agents, so it isn't saved with them).
+  // Leo isn't one of the user's agents, so its settings are saved apart.
   "/api/leo": {
     GET: () => Response.json(leoSettings()),
     PUT: safe(async (req) => {
@@ -91,7 +94,7 @@ export const agentRoutes = {
   "/api/boards/:board/agents": {
     GET: safe(onBoard(() => Response.json(listDefs())), 404),
   },
-  // Install an agent's skills now, in its board's computer if that's on (otherwise on the agent's first run).
+  // Installs now if the board's computer is on, else on the agent's first run.
   "/api/boards/:board/agents/:name/skills": {
     POST: safe(onBoard(async (req: Bun.BunRequest<"/api/boards/:board/agents/:name/skills">) => {
       const def = loadDef(req.params.name);
@@ -106,7 +109,6 @@ export const agentRoutes = {
       return new Response(null, { status: 204 });
     })),
   },
-  // Summarize older turns now (the chat's /compact command).
   "/api/boards/:board/agents/:name/:conversation/compact": {
     POST: safe(onBoard(async (req: Bun.BunRequest<"/api/boards/:board/agents/:name/:conversation/compact">) => {
       const { name, conversation } = req.params;
@@ -122,9 +124,7 @@ export const agentRoutes = {
       return new Response(null, { status: 204 });
     })),
   },
-  // One conversation per URL.
   "/api/boards/:board/agents/:name/:conversation": {
-    // History of a conversation (in memory, else saved on disk).
     GET: safe(onBoard((req: Bun.BunRequest<"/api/boards/:board/agents/:name/:conversation">) => {
       const { name, conversation } = req.params;
       if (!NAME.test(name) || !CONVERSATION.test(conversation)) return Response.json({ messages: [], running: false });

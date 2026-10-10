@@ -1,6 +1,5 @@
-// Model credentials per tenant. A tenant's ChatGPT sign-in tokens live in its vault entry "pi/<provider>".
-// The install owner also gets the logins made with the pi command-line tool (~/.pi/agent/auth.json): they
-// belong to this machine's user. Other accounts only ever see their own tokens.
+// Model credentials per tenant, in its vault entry "pi/<provider>". Only the install owner also gets this
+// machine's pi CLI logins (~/.pi/agent/auth.json).
 import type { Credential, CredentialStore } from "@earendil-works/pi-ai";
 import { writePrivate } from "./private-file";
 import { isOwner } from "./tenant";
@@ -34,7 +33,6 @@ export const piAuth: CredentialStore = {
 /** Providers a tenant keeps in its own vault (the vault has no listing). */
 const OWN = ["openai"];
 
-/** The credential store pi uses for one tenant's models. */
 export function tenantCredentials(tenant: string): CredentialStore {
   const own = async (id: string) => {
     const raw = await vaultGet(tenant, `pi/${id}`);

@@ -1,4 +1,4 @@
-// Side panel widths (the card / agents panel, Leo's), dragged by PanelResizer and remembered in this browser.
+// Side panel widths, remembered in this browser.
 import { create } from "zustand";
 import { storage } from "../lib/storage";
 
@@ -8,7 +8,6 @@ const savedWidths = (): Partial<Record<Panel, number>> => { try { return JSON.pa
 
 export const usePanels = create<{ panelWidth: Record<Panel, number>; setPanelWidth: (panel: Panel, width?: number) => void }>((set, get) => ({
   panelWidth: { ...PANEL_WIDTHS, ...savedWidths() },
-  // No width: back to the default.
   setPanelWidth: (panel, width) => {
     const panelWidth = { ...get().panelWidth, [panel]: width ?? PANEL_WIDTHS[panel] };
     set({ panelWidth });

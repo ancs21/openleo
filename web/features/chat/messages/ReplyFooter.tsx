@@ -17,7 +17,6 @@ function Action({ label, icon, onClick }: { label: string; icon: keyof typeof IC
   );
 }
 
-/** Under a finished reply: copy, ask again (latest reply only), and the sources it used. */
 export function ReplyFooter({ text, sources, onRetry }: { text: string; sources: string[]; onRetry?: () => void }) {
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);

@@ -1,5 +1,4 @@
-// Card runs: an agent works on a task card in the card's board (its agents, chats and computer). A card runs
-// by hand, on its schedule, or when it lands in a list with an agent; each run is noted on the card.
+// Card runs: an agent works on a card in its board, by hand, on schedule, or when the card lands in a list with an agent.
 import { MEMORY_KEEPER, taskAgents, type TaskCard, type TaskRun } from "../../shared/types";
 import { nextRun, parseSchedule } from "../../shared/schedule";
 import type { Field } from "../../shared/fields";
@@ -9,17 +8,14 @@ import { lastText } from "../infra/runtime";
 import { inBoard } from "../infra/sandbox";
 import { inTenant, listTenants } from "../infra/tenant";
 import { loadDef } from "./agents";
-import { addCard, getBoard, listBoards, updateTask } from "./boards";
+import { addCard, boardOfCard, getBoard, listBoards, updateTask } from "./boards";
 import { compactIfLong, compacting, getSession, runningCount, skey, taskStops } from "./live-agents";
 import { TIDY_NOTES, TIDY_TITLE } from "./notes";
 
 const RUNS_KEPT = 20;
 const FAILS_TO_PAUSE = 3; // a schedule that keeps failing stops itself rather than spend usage on nothing
 
-/**
- * Note a finished (or skipped) run on its card. A scheduled run that failed adds to the card's failure count;
- * after FAILS_TO_PAUSE in a row its schedule pauses. A good scheduled run clears the count.
- */
+/** Note a run on its card. FAILS_TO_PAUSE failed scheduled runs in a row pause the schedule; a good one clears the count. */
 function recordRun(bid: string, cid: string, run: TaskRun) {
   const card = getBoard(bid).cards[cid];
   if (!card) return;
@@ -32,14 +28,13 @@ function recordRun(bid: string, cid: string, run: TaskRun) {
   updateTask(bid, cid, patch);
 }
 
-/** The card's fields and their values, for the agent to fill in as it works. */
 function fieldsNote(board: { fields?: Field[] }, card: TaskCard) {
-  if (!board.fields?.length) return "";
-  const rows = board.fields.map((f) => `- ${f.name} (${f.type}${f.options?.length ? `: ${f.options.join(" / ")}` : ""}): ${card.values?.[f.id] ?? "empty"}`);
-  return `Card fields (fill in what you find with set_card_fields):\n${rows.join("\n")}`;
+  const set = (board.fields ?? []).filter((f) => card.values?.[f.id]);
+  if (!set.length) return "";
+  const rows = set.map((f) => `- ${f.name} (${f.type}${f.options?.length ? `: ${f.options.join(" / ")}` : ""}): ${card.values![f.id]}`);
+  return `Card fields (change them with set_card_fields):\n${rows.join("\n")}`;
 }
 
-/** Run a card's agent on it, inside the card's board. `how` says what started it (for the card's run history). */
 export function runTask(bid: string, cid: string, agentName: string, how: TaskRun["how"] = "manual") {
   return inBoard(bid, () => runTaskHere(bid, cid, agentName, how));
 }
@@ -80,17 +75,28 @@ function runTaskHere(bid: string, cid: string, agentName: string, how: TaskRun["
   );
 }
 
+/** A message in a task's chat ("task-<card id>") is a run too. Returns how to note its end, or nothing if not a task's. */
+export function chatRun(conversation: string, agentName: string) {
+  const cid = conversation.startsWith("task-") ? conversation.slice(5) : "";
+  const bid = cid ? boardOfCard(cid) : undefined;
+  if (!bid || getBoard(bid).cards[cid]?.kind !== "task") return () => {};
+  const started = Date.now();
+  updateTask(bid, cid, { status: "running", agent: agentName, result: undefined, ranAt: started });
+  return (error: string | undefined, text: string) => {
+    if (!getBoard(bid).cards[cid]) return;
+    updateTask(bid, cid, error ? { status: "error", result: error } : { status: "done", result: text.slice(0, 20_000) });
+    recordRun(bid, cid, { at: started, agent: agentName, how: "manual", status: error ? "error" : "done", ...(error ? { note: error.slice(0, 300) } : {}) });
+  };
+}
+
 /** Start a run that nobody is waiting on (a schedule, a new card): if it can't start, the card's history says why. */
 export function startOrNote(bid: string, cid: string, agentName: string, how: TaskRun["how"]) {
   try { runTask(bid, cid, agentName, how); }
   catch (e) { recordRun(bid, cid, { at: Date.now(), agent: agentName, how, status: "error", note: (e as Error).message }); }
 }
 
-/**
- * Run the cards whose schedule is due, for every account. The next run is booked before this one starts,
- * so a failure waits for its next turn instead of retrying every tick; a card still working skips its turn.
- * A run missed while the computer slept comes once on wake, never as a backlog.
- */
+/** Run due cards for every account. The next run is booked first, so a failure waits its turn and a busy card skips;
+ * a run missed while the computer slept comes once on wake, never as a backlog. */
 export function runDueSchedules() {
   const now = Date.now();
   for (const tenant of listTenants()) inTenant(tenant, () => {
@@ -104,7 +110,6 @@ export function runDueSchedules() {
   });
 }
 
-/** Cards that arrived in a list with an agent: that agent works on each (a failure to start is noted on the card). */
 export function runAddedCards(bid: string, before: Set<string>) {
   for (const list of getBoard(bid).lists) {
     if (!list.agent) continue;

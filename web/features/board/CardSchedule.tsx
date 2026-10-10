@@ -41,7 +41,6 @@ const STATUS: Record<TaskRun["status"], { label: string; cls: string }> = {
 };
 const HOW: Record<TaskRun["how"], string> = { manual: "by you", schedule: "on schedule", added: "when added" };
 
-/** "Repeat" in a card's agent tab: run this card again on a schedule, and its recent runs. */
 export function CardSchedule({ card, agent }: { card: TaskCard; agent: string }) {
   const editTask = useBoard((s) => s.editTask);
   const s = card.schedule;

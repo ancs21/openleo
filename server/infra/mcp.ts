@@ -1,7 +1,5 @@
-// MCP servers ("connected apps"). Config lives in <tenant>/mcp.json; API keys (header values) live in the vault,
-// and the file keeps only their names.
-// Each server is connected once and its tool list cached, so agents can be built synchronously;
-// tool calls go through that shared client. Tools are named "<server>__<tool>".
+// MCP servers ("connected apps"): config in <tenant>/mcp.json, header values in the vault. Each server is connected
+// once and its tools cached, so agents can be built synchronously. Tools are named "<server>__<tool>".
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -75,7 +73,6 @@ async function connect(name: string, cfg: McpConfig) {
   }
 }
 
-/** Connect every server the current tenant configured (at startup and first sign-in). */
 export async function startMcp() {
   const all = await readAll();
   await Promise.all(Object.entries(all).map(([name, cfg]) => connect(name, cfg)));
@@ -88,7 +85,7 @@ export async function listMcp(): Promise<McpServerInfo[]> {
       name,
       url: cfg.url,
       command: cfg.command ? [cfg.command, ...(cfg.args ?? [])].join(" ") : undefined,
-      headerNames: cfg.headerNames ?? [], // names only: values are in the vault
+      headerNames: cfg.headerNames ?? [],
       connected: !!l?.client,
       error: l?.error,
       tools: (l?.tools ?? []).map((t) => ({ name: t.name, label: t.label, description: t.description })),
@@ -128,5 +125,4 @@ export async function deleteMcp(name: string) {
   live.delete(key(name));
 }
 
-/** Cached tools of the given servers (servers that failed to connect contribute none). */
 export const mcpToolsFor = (names: string[]) => names.flatMap((n) => live.get(key(n))?.tools ?? []);

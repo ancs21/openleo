@@ -1,9 +1,5 @@
-// OpenLeo's server: AI agents on a board, no code. This file wires the layers together and starts listening.
-//   core/   rules on plain data (boards, GitHub rows, wallpapers, chat history); no I/O
-//   app/    use cases: agents and their chats, card runs, Leo, notes, skills
-//   infra/  files, the vault, sign-in, computers, models, GitHub, Unsplash, settings (infra/config.ts)
-//   http/   routes; every route but signing in needs a session and runs as that account (http/guard.ts)
-// Inner layers never import outer ones (layers.test.ts).
+// OpenLeo's server: wires the layers together and starts listening.
+// Layers, inner to outer: core/ (pure rules), app/, infra/, http/. Inner never imports outer (layers.test.ts).
 import { registerBunOAuthFlows } from "@earendil-works/pi-ai/bun-oauth";
 import index from "../web/index.html";
 import { startComputers } from "./app/computers";
@@ -48,19 +44,17 @@ const server = Bun.serve({
   port: PORT,
   hostname: HOST,
   ...(TLS ? { tls: TLS } : {}),
-  // Production (`bun run start`, the Mac app): pages are bundled once, minified, with React's production build.
   development: process.env.NODE_ENV !== "production",
   idleTimeout: 0, // agent runs can be long
   routes,
   websocket: viewerSocket,
 });
-// The same app on this computer's Tailscale address, when the owner turned that on (http/remote.ts).
 void serveOnTailnet(routes);
 
 console.log(`OpenLeo on ${PUBLIC_ORIGIN}${HOST === "127.0.0.1" ? "" : ` (listening on ${HOST}:${server.port})`}`);
-// Computers stay on: at launch, start every board's computer and connect every app, for every tenant.
+// Computers stay on: at launch, start every tenant's computers and apps.
 for (const tenant of listTenants()) inTenant(tenant, () => { moveAgentsToBoards(); startComputers(); void startMcp(); });
-// Schedules: check every 30 s. One timer even across hot reloads in development.
+// One schedule timer, even across hot reloads in development.
 const g = globalThis as { openleoSchedules?: ReturnType<typeof setInterval> };
 clearInterval(g.openleoSchedules);
 g.openleoSchedules = setInterval(runDueSchedules, 30_000);

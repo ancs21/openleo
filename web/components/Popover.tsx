@@ -7,14 +7,7 @@ import { Icon, glyphs } from "./Icon";
 type Box = { top: number; left: number; width: number; height: number; danger: boolean };
 const EASE = "cubic-bezier(0.23,1,0.32,1)";
 
-/**
- * Anchored menu/popover: renders `trigger`, and when `open`, the panel next to it. The panel lives in a layer
- * above the page (portal, fixed position), so a scrolling or clipped container (a dialog, a side panel) can't
- * cut it off; it opens upward when there's no room below, and follows the trigger on scroll and resize.
- * Closes on outside click and Esc. `align` picks which edge of the trigger the panel lines up with;
- * `matchWidth` makes it as wide as the trigger (a select).
- * Menu rows (MenuItem) share one highlight that glides to the hovered row.
- */
+/** The panel is portaled with fixed position so a scrolling or clipped container can't cut it off. */
 export function Popover({ open, onClose, trigger, children, align = "right", className = "w-48", matchWidth = false }: {
   open: boolean; onClose: () => void; trigger: ReactNode; children: ReactNode; align?: "left" | "right"; className?: string; matchWidth?: boolean;
 }) {
@@ -24,13 +17,13 @@ export function Popover({ open, onClose, trigger, children, align = "right", cla
   const [hover, setHover] = useState<{ box: Box; shown: boolean }>();
   useEscape(onClose, { enabled: open, exclusive: true });
 
-  // Outside = not in the trigger, the panel, or a menu opened from the panel (a dropdown in a form). Those are in
-  // different parts of the page, but React events still bubble through them to here, before the page's listener runs.
+  // React events from the trigger, the panel and menus opened from it bubble here before the page's listener runs,
+  // even across portals, so `inside` marks a press that isn't outside.
   const close = useLatest(onClose);
   const inside = useRef(false);
   useEffect(() => {
     if (!open) return;
-    inside.current = false; // the press that opened it is done
+    inside.current = false;
     const onDown = () => {
       if (!inside.current) close.current();
       inside.current = false;
@@ -75,22 +68,18 @@ export function Popover({ open, onClose, trigger, children, align = "right", cla
             <span aria-hidden className={`pointer-events-none absolute rounded-[6px] ${hover.box.danger ? "bg-red-tint" : "bg-hover"}`}
               style={{
                 ...hover.box, opacity: hover.shown ? 1 : 0,
-                // glide between rows while shown; appear in place when the pointer comes back in
                 transition: hover.shown ? `top 220ms ${EASE}, height 220ms ${EASE}, opacity 150ms ease` : "opacity 150ms ease",
               }} />
           )}
           {children}
         </div>,
-        ref.current?.closest("dialog") ?? document.body, // a modal dialog covers the page: a menu in one opens inside it
+        ref.current?.closest("dialog") ?? document.body, // a modal dialog covers the page, so open inside it
       )}
     </div>
   );
 }
 
-/**
- * A row in a Popover menu: a link with `to`, otherwise a button. `checked` makes it one choice of several
- * (a check marks the current one); `extra` sits at the right edge (e.g. a count).
- */
+/** A link with `to`, otherwise a button. `checked` marks one choice of several. */
 export function MenuItem({ onClick, to, children, icon, extra, danger = false, checked, disabled, title }: {
   onClick?: () => void; to?: string; children: ReactNode; icon?: ReactNode; extra?: ReactNode; danger?: boolean; checked?: boolean; disabled?: boolean; title?: string;
 }) {

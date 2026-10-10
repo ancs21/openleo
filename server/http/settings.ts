@@ -15,8 +15,7 @@ import { safe } from "./guard";
 import mcpDirectory from "./mcp-directory.json";
 
 export const settingsRoutes = {
-  // With an in-app ChatGPT sign-in ("openai"), the same models through this computer's command-line login ("openai-codex")
-  // are left out: they'd look the same in the picker, and that login can expire on its own.
+  // With an in-app "openai" sign-in, hide "openai-codex": same models in the picker, and that login can expire.
   "/api/models": async () => {
     const all = await models().getAvailable();
     const signedIn = all.some((m) => m.provider === "openai");
@@ -25,13 +24,13 @@ export const settingsRoutes = {
   "/api/favicon/:host": async (req: Bun.BunRequest<"/api/favicon/:host">) => {
     const icon = await favicon(req.params.host.toLowerCase());
     return icon
-      ? new Response(icon.bytes as Uint8Array<ArrayBuffer>, { headers: { "content-type": icon.type, "cache-control": "public, max-age=604800", "x-content-type-options": "nosniff" } })
+      ? new Response(icon.bytes as Uint8Array<ArrayBuffer>, { headers: { "content-type": icon.type, "cache-control": "public, max-age=604800", "x-content-type-options": "nosniff",
+          // A site's SVG could carry script: opened on its own, it runs nothing.
+          "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox" } })
       : new Response(null, { status: 404, headers: { "cache-control": "public, max-age=86400" } });
   },
-  // The open skills directory (skills.sh): search it, and look inside a skill before adding it.
   "/api/skills/search": safe(async (req) => Response.json(await searchSkills(new URL(req.url).searchParams.get("q")?.slice(0, 200) ?? "")), 502),
   "/api/skills/preview": safe(async (req) => Response.json(await previewSkill(new URL(req.url).searchParams.get("id") ?? "")), 502),
-  // This account's usage against its limits (the owner has none).
   "/api/limits": () => Response.json({
     unlimited: unlimited(),
     boards: { used: listBoards().length, max: LIMITS.boards },
@@ -40,11 +39,9 @@ export const settingsRoutes = {
     computer: { cpus: LIMITS.computerCpus, memoryMb: LIMITS.computerMemoryMb },
   }),
   "/api/mcp": async () => Response.json(await listMcp()),
-  // Known apps for "Add an app": hosted MCP servers that take an API key or no sign-in.
   "/api/mcp-directory": () => Response.json(mcpDirectory),
   "/api/icon": { POST: safe(async (req) => Response.json({ icon: (await pickIcon(String(((await req.json()) as any).text ?? ""))) ?? null }), 502) },
   "/api/mcp/:name": {
-    // Saving connects right away and returns the server's tools (or the connection error).
     PUT: safe(async (req: Bun.BunRequest<"/api/mcp/:name">) => {
       const info = await saveMcp(req.params.name, parseMcpConfig(await req.json()));
       for (const b of listBoards()) inBoard(b.id, () => { for (const def of listDefs()) if (def.mcp?.includes(info.name)) dropSessions(def.name); }); // pick up the new tool list

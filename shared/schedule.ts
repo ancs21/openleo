@@ -1,13 +1,10 @@
-// Card schedules: when a task card's agent runs again on its own. Plain data, no cron: either every N minutes,
-// or at a wall-clock time on chosen weekdays in an IANA time zone (so DST moves with the clock, as people expect).
-// Pure: the server's scheduler and the card panel both use it.
+// Card schedules: every N minutes, or at a wall-clock time on chosen weekdays in an IANA zone (so DST follows the clock).
 
-export const MIN_MINUTES = 5; // the shortest repeat: each run uses the plan's usage
+export const MIN_MINUTES = 5; // each run uses the plan's usage
 
 export type Schedule = {
-  /** the agent that runs the card */
   agent: string;
-  /** IANA zone the time is in, e.g. "Asia/Ho_Chi_Minh" */
+  /** IANA zone, e.g. "Asia/Ho_Chi_Minh" */
   zone: string;
   paused?: boolean;
 } & ({ minutes: number } | { at: string; days: number[] }); // days: 0 = Sunday … 6 = Saturday
@@ -15,7 +12,6 @@ export type Schedule = {
 const DAY_MS = 86_400_000;
 const AT = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-/** A schedule from untrusted input, or null when it isn't a valid one. */
 export function parseSchedule(v: any): Schedule | null {
   if (!v || typeof v.agent !== "string" || !v.agent || typeof v.zone !== "string" || !validZone(v.zone)) return null;
   const base = { agent: v.agent, zone: v.zone, ...(v.paused === true ? { paused: true } : {}) };
@@ -29,7 +25,6 @@ function validZone(zone: string) {
   try { new Intl.DateTimeFormat("en-US", { timeZone: zone }); return true; } catch { return false; }
 }
 
-/** The wall clock in `zone` at instant `t`. */
 function wallClock(t: number, zone: string) {
   const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
     timeZone: zone, hourCycle: "h23", year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", weekday: "short",
@@ -37,7 +32,7 @@ function wallClock(t: number, zone: string) {
   return { y: +p.year!, m: +p.month!, d: +p.day!, h: +p.hour!, min: +p.minute!, s: +p.second!, wd: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(p.weekday!) };
 }
 
-/** The instant a wall-clock time happens in `zone`. A time skipped by a DST jump lands just after the jump. */
+/** A time skipped by a DST jump lands just after the jump. */
 function instantOf(y: number, m: number, d: number, h: number, min: number, zone: string) {
   const want = Date.UTC(y, m - 1, d, h, min);
   let t = want;
@@ -48,7 +43,7 @@ function instantOf(y: number, m: number, d: number, h: number, min: number, zone
   return t;
 }
 
-/** The first run strictly after `after` (ms). `last` (an interval's previous run) keeps intervals on their beat. */
+/** The first run strictly after `after`. `last` (an interval's previous run) keeps intervals on their beat. */
 export function nextRun(s: Schedule, after: number, last?: number): number {
   if ("minutes" in s) {
     const step = s.minutes * 60_000;

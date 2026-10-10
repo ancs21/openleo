@@ -1,6 +1,5 @@
-// Browser sessions for "Continue with ChatGPT". The browser holds a random id in an HttpOnly cookie; the server
-// keeps only its SHA-256 hash (sessions.json, owner-only), so a copy of the file can't be used to sign in.
-// Sessions last 30 days from last use.
+// Browser sessions: a random id in an HttpOnly cookie; the server keeps only its SHA-256 hash, so a copy of
+// sessions.json can't be used to sign in.
 import { HOME, PUBLIC_ORIGIN, PUBLIC_URL } from "./config";
 import { tailnetOrigin } from "./tailnet";
 import { writePrivate } from "./private-file";
@@ -31,14 +30,12 @@ const cookieValue = (req: Request, name: string) =>
   req.headers.get("cookie")?.split(/;\s*/).find((c) => c.startsWith(`${name}=`))?.slice(name.length + 1);
 const idOf = (req: Request) => cookieValue(req, COOKIE);
 
-// The account this browser signed in as last (a tenant id, not a secret), so the next sign-in reuses its
-// ChatGPT registration instead of registering OpenLeo again.
+// Last account this browser used (a tenant id, not a secret), so the next sign-in reuses its client registration.
 const ACCOUNT = "openleo_account";
 export const accountOf = (req: Request) => cookieValue(req, ACCOUNT);
 export const rememberAccount = (req: Request, tenant: string) => cookie(req, tenant, 365 * 24 * 3600, ACCOUNT);
 export const forgetAccount = (req: Request) => cookie(req, "", 0, ACCOUNT);
 
-/** The signed-in session for this request, or null. */
 export function sessionOf(req: Request): Session | null {
   const id = idOf(req);
   const s = id ? sessions.get(hash(id)) : undefined;
@@ -48,7 +45,7 @@ export function sessionOf(req: Request): Session | null {
   return s;
 }
 
-/** Start a session; returns the Set-Cookie header value. */
+/** Returns the Set-Cookie header value. */
 export async function createSession(req: Request, account: string, email?: string) {
   const id = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
   sessions.set(hash(id), { account, email, created: Date.now(), seen: Date.now() });
@@ -56,7 +53,7 @@ export async function createSession(req: Request, account: string, email?: strin
   return cookie(req, id, TTL_MS / 1000);
 }
 
-/** End this request's session; returns the Set-Cookie header value that clears it. */
+/** Returns the Set-Cookie header value that clears it. */
 export async function destroySession(req: Request) {
   const id = idOf(req);
   if (id && sessions.delete(hash(id))) await persist();

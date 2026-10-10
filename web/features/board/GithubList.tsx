@@ -1,6 +1,5 @@
-// A list that shows a GitHub search (pull requests, issues) instead of its own cards; server/infra/github.ts fetches it.
-// Rows sync when someone presses Sync (GitHub limits requests per hour); dragging one onto another list (or "Add to")
-// turns it into a card there.
+// A list showing a GitHub search instead of its own cards. Rows sync only when you press Sync (GitHub
+// limits requests per hour); dragging one onto another list turns it into a card there.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { draggable } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { tiltedPreview } from "./dnd";
@@ -23,7 +22,6 @@ type Account = { connected: boolean; login?: string };
 // A project's own Status words (Todo, In Progress…) show in the plain colour.
 const STATUS_TONE: Record<string, string> = { open: "text-green", draft: "text-ink-3", merged: "text-accent-ink", closed: "text-red", done: "text-ink-3" };
 
-/** Set up a GitHub list: connect GitHub, then pick what to show and from which repo (or write the search by hand). */
 export function GithubSourceDialog({ list, open, onClose }: { list: List; open: boolean; onClose: () => void }) {
   const setListSource = useBoard((s) => s.setListSource);
   const [account, setAccount] = useState<Account>();
@@ -97,7 +95,6 @@ export function GithubSourceDialog({ list, open, onClose }: { list: List; open: 
   );
 }
 
-/** The rows of a GitHub list, in place of its cards. */
 export function GithubRows({ list }: { list: List }) {
   const { boardId, board, addRow } = useBoard();
   const base = `/api/boards/${boardId}/lists/${list.id}/github`;
@@ -142,7 +139,6 @@ export function GithubRows({ list }: { list: List }) {
   );
 }
 
-/** One item: drag it onto another list, or use "Add to", to make it a card there. */
 export function Row({ row, listId, added, targets, onAdd }: { row: GithubRow; listId: string; added: boolean; targets: List[]; onAdd: (listId: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -177,7 +173,7 @@ export function Row({ row, listId, added, targets, onAdd }: { row: GithubRow; li
   );
 }
 
-/** Connect a GitHub account with a token it can read with (kept on this computer, never shown again). */
+/** The token is kept on this computer and never shown again. */
 function Connect({ onConnected }: { onConnected: (a: Account) => void }) {
   const [token, setToken] = useState("");
   const [error, setError] = useState<string>();

@@ -2,8 +2,8 @@ import { usePanels, type Panel } from "../stores/panels";
 
 const MIN = 360;
 
-/** The left edge of a side panel: drag it to make the panel wider or narrower (remembered); double-click for the default width. */
-export function PanelResizer({ panel, offset = 0 }: { panel: Panel; /** px between the panel's right edge and the window's (another panel) */ offset?: number }) {
+/** Drag the panel's left edge to resize it; double-click for the default width. */
+export function PanelResizer({ panel, offset = 0 }: { panel: Panel; offset?: number }) {
   const setPanelWidth = usePanels((s) => s.setPanelWidth);
   const widthAt = (x: number) => Math.round(Math.min(Math.max(innerWidth - 12 - offset - x, MIN), innerWidth - 24 - offset));
   return (

@@ -1,5 +1,4 @@
-// Readable text from an HTML page (for the "Read web pages" tool): scripts, styles and markup removed,
-// block elements on their own lines, external link targets kept in parentheses. Uses Bun's HTMLRewriter.
+// Readable text from an HTML page: markup removed, block elements on their own lines, external link targets kept in parentheses.
 const BLOCK = "p,div,section,article,header,footer,main,nav,li,ul,ol,h1,h2,h3,h4,h5,h6,tr,br,pre,blockquote,table,figure";
 const SKIP = "script,style,noscript,svg,template,iframe,head";
 const NAMED: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };

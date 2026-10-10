@@ -1,9 +1,8 @@
-// Pragmatic DnD glue: native drag preview + converting drop-target data into model types.
 import { preserveOffsetOnSource } from "@atlaskit/pragmatic-drag-and-drop/utils/preserve-offset-on-source";
 import { setCustomNativeDragPreview } from "@atlaskit/pragmatic-drag-and-drop/utils/set-custom-native-drag-preview";
 import type { DragSource, DropTarget, Edge } from "./model";
 
-// Closest-edge hitbox (replaces @atlaskit/pragmatic-drag-and-drop-hitbox, whose circular re-exports break Bun's bundler).
+// Own closest-edge hitbox: the hitbox package's circular re-exports break Bun's bundler.
 const EDGE = Symbol("closestEdge");
 
 /** Attach the edge of `element` nearest the pointer (among `allowedEdges`) to drop-target data. */
@@ -23,7 +22,6 @@ export const extractClosestEdge = (data: Record<string | symbol, unknown>): Edge
 
 type PreviewArgs = { element: HTMLElement; input: { clientX: number; clientY: number }; nativeSetDragImage: ((image: Element, x: number, y: number) => void) | null };
 
-/** Native drag image: a slightly tilted clone of the element, grabbed where the pointer is. */
 export function tiltedPreview({ element, input, nativeSetDragImage }: PreviewArgs, tilt = 2.5) {
   setCustomNativeDragPreview({
     nativeSetDragImage,

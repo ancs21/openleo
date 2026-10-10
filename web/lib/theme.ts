@@ -30,8 +30,6 @@ media.addEventListener("change", () => { if (getTheme() === "system") { apply();
 const subscribe = (l: () => void) => (listeners.add(l), () => listeners.delete(l));
 export const isDark = () => getTheme() === "dark" || (getTheme() === "system" && media.matches);
 
-/** Current theme preference, re-rendering when it changes. */
 export const useTheme = () => useSyncExternalStore(subscribe, getTheme, (): Theme => "system"); // a page rendered ahead of time follows the system
 
-/** Whether the UI is currently dark (the preference resolved against the OS for "system"). */
 export const useIsDark = () => useSyncExternalStore(subscribe, isDark, () => false);

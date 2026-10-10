@@ -20,7 +20,6 @@ const heading = "text-[13.5px] font-semibold text-ink";
 const hint = "text-[12.5px] text-ink-3";
 const row = "flex min-h-11 items-center gap-2 rounded-card border border-line px-3 py-2";
 
-/** The whole board in one place: its name, the fields every card has, and what each list does with new cards. */
 export function BoardSettings({ onClose }: { onClose: () => void }) {
   const { board, boardId, renameBoard, setFields, setAutomationList } = useBoard();
   const agents = useApp((s) => s.agents);
@@ -95,7 +94,6 @@ export function BoardSettings({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** Say what the board is for; the lists and fields it needs are added (and can be changed below). */
 function SetupChat() {
   const setupBoard = useBoard((s) => s.setupBoard);
   const [text, setText] = useState("");

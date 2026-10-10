@@ -1,6 +1,5 @@
-// Card/dock: a snapshot preview of the sandbox screen (~every 1.5s). Open: cua's own viewer (hardware video + full input)
-// embedded same-origin via /sbviewer. "Teach a task" records keyframes while you drive, and End hands them
-// to the agent as a demonstration.
+// A computer's screen: snapshot preview, or the full viewer embedded same-origin. "Teach a task" records
+// keyframes while you drive and hands them to the agent on End.
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "../../components/Button";
@@ -35,10 +34,7 @@ function LoadingScreen({ label = "Connecting to agent's screen" }: { label?: str
   );
 }
 
-/**
- * Live preview: a fresh JPEG snapshot every `ms` while the tab is visible. Short requests on purpose:
- * long-lived MJPEG streams each hold one of the browser's ~6 connections per host and starve other requests.
- */
+/** Short snapshot requests on purpose: long MJPEG streams each hold one of the browser's ~6 connections per host. */
 function useSnapshot(url: string, ms: number) {
   const [src, setSrc] = useState<string>();
   const [error, setError] = useState(false);
@@ -74,7 +70,7 @@ function useRecorder(recording: boolean, board: string) {
       const r = await fetch(`/api/sandbox/screen?board=${encodeURIComponent(board)}&t=${Date.now()}`, { cache: "no-store" }).catch(() => null);
       if (!r?.ok) return;
       const blob = await r.blob();
-      if (blob.size === lastSize) return; // nothing changed
+      if (blob.size === lastSize) return;
       lastSize = blob.size;
       const url = await new Promise<string>((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result as string); fr.readAsDataURL(blob); });
       frames.current.push(url);
@@ -87,13 +83,12 @@ function useRecorder(recording: boolean, board: string) {
 
 export default function AgentScreen({ agentName, board = "main", onInteract, onTeach, variant = "card", status }: {
   agentName: string;
-  /** whose computer to show */
   board?: string;
   /** "card": framed preview with an Open pill. "dock": small thumbnail + status that docks above the composer. */
   variant?: "card" | "dock";
   /** dock only: what the agent is doing ("Working", "Idle"…) */
   status?: ReactNode;
-  /** pop out cua's full viewer in a new tab (video, audio, file drop) */
+  /** pop out the full viewer in a new tab (video, audio, file drop) */
   onInteract: () => void;
   /** recording ended: evenly spaced keyframes of what you did, and its length */
   onTeach: (keyframes: string[], seconds: number) => void;
@@ -189,17 +184,13 @@ export default function AgentScreen({ agentName, board = "main", onInteract, onT
   );
 }
 
-/**
- * A board's computer, full size: the live viewer you can click into and drive. `actions` go before the
- * pop-out and collapse buttons (e.g. Teach a task).
- */
+/** `actions` go before the pop-out and collapse buttons. */
 export function ScreenDialog({ title, board, badge, actions, onPopOut, onClose }: {
   title: string; board: string; badge?: ReactNode; actions?: ReactNode; onPopOut: () => void; onClose: () => void;
 }) {
   const [embed, setEmbed] = useState<string>();
   const [embedErr, setEmbedErr] = useState<string>();
 
-  // Mint a fresh viewer ticket each time the viewer opens.
   useEffect(() => {
     let gone = false;
     fetch(`/api/sandbox/viewer?board=${encodeURIComponent(board)}`, { method: "POST" })

@@ -1,5 +1,4 @@
 // Per-account limits, so one account can't use up this machine. The install owner has none.
-// The numbers are settings (infra/config.ts).
 import { lstatSync, readdirSync } from "node:fs";
 import { currentTenant, dataDir, isOwner } from "./tenant";
 
@@ -7,7 +6,6 @@ import { LIMITS } from "./config";
 
 export const unlimited = () => isOwner(currentTenant());
 
-/** A limit was reached: the message says what to do about it. */
 export class LimitError extends Error {}
 
 export function checkBoards(count: number) {

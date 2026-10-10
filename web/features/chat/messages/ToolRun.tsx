@@ -1,10 +1,8 @@
-// ToolChips -> ToolRun/ToolRow, wired to live tool calls.
 import { useState } from "react";
 import { Icon, glyphs } from "../../../components/Icon";
 import { Chevron, Reveal, Shimmer, Spinner } from "../../../components/motion";
 import type { ToolPart } from "../useAgent";
 
-/** Map a raw tool call to a ToolChips-style row: icon, verb, chip. */
 function describe(p: ToolPart) {
   const a = (p.input ?? {}) as Record<string, string>;
   if (p.toolName === "bash") return { icon: glyphs.run, label: "Run", chip: a.command, mono: true };
@@ -15,7 +13,7 @@ function describe(p: ToolPart) {
     const verb = a.type === "open_page" ? "Open" : a.type === "find" ? "Find" : a.type ? "Search" : "Searching the web";
     return { icon: glyphs.search, label: verb, chip: a.query ?? a.url ?? "", mono: false };
   }
-  if (p.toolName === "computer") {
+  if (p.toolName === "desktop" || p.toolName === "computer") { // "computer" in older chats
     const c = (p.input ?? {}) as Record<string, any>;
     const at = c.x != null ? `${c.x}, ${c.y}${c.to_x != null ? ` → ${c.to_x}, ${c.to_y}` : ""}` : "";
     const label = String(c.action ?? "").replace("_", " ");
@@ -27,6 +25,7 @@ function describe(p: ToolPart) {
   const t = (p.input ?? {}) as { list?: string; cards?: unknown[]; card?: number; agent?: string; rename?: string; fields?: { name: string }[]; values?: Record<string, string> };
   if (p.toolName === "read_board") return { icon: glyphs.board, label: "Read board", chip: "lists, cards and fields", mono: false };
   if (p.toolName === "add_cards") return { icon: glyphs.plus, label: "Add cards", chip: `${t.cards?.length ?? 0} to ${t.list}`, mono: false };
+  if (p.toolName === "read_card") return { icon: glyphs.board, label: "Read card", chip: `#${t.card}`, mono: false };
   if (p.toolName === "update_card") return { icon: glyphs.write, label: "Update card", chip: `#${t.card}${t.list ? ` → ${t.list}` : ""}`, mono: false };
   if (p.toolName === "set_list") return { icon: glyphs.board, label: "Set up list", chip: `${t.rename ?? t.list}${t.agent ? ` · new cards go to ${t.agent}` : ""}`, mono: false };
   if (p.toolName === "add_fields") return { icon: glyphs.plus, label: "Add fields", chip: (t.fields ?? []).map((f) => f.name).join(", "), mono: false };
@@ -76,7 +75,6 @@ export function ToolRow({ part }: { part: ToolPart }) {
   );
 }
 
-/** ToolChips header: "N tool calls" that collapses the run. */
 export function ToolRun({ parts }: { parts: ToolPart[] }) {
   const [open, setOpen] = useState(true);
   const running = parts.some((p) => p.state === "input-available");

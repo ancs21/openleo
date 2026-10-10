@@ -1,7 +1,5 @@
-// Board computers on Apple's own container runtime (https://github.com/apple/container, macOS 26+) instead of Docker.
-// Each computer is a light VM with its own address on a host-only network; we start it with the `container`
-// command and then talk to its control service (port 3211) directly, like any cua computer.
-// Used by default when this Mac can run it (appleAvailable), or with OPENLEO_SANDBOX_ON=apple; build the image with `bun run computer:build:apple`.
+// Board computers on Apple's container tool (macOS 26+): each is a light VM with its own address on a host-only
+// network, reached directly on its control port 3211. Default when appleAvailable(), or OPENLEO_SANDBOX_ON=apple.
 import { embedded, type SandboxLike } from "@trycua/cua";
 import { randomBytes } from "node:crypto";
 import { release } from "node:os";
@@ -11,7 +9,7 @@ import { computerSize } from "./limits";
 
 const TOKEN_VAR = "CUA_ENV_TOKEN=";
 
-/** This Mac can run computers natively: Apple silicon, macOS 26+ (Darwin 25), the `container` command running, and the image built. */
+/** Apple silicon, macOS 26+ (Darwin 25), and the image built. */
 export function appleAvailable() {
   if (process.platform !== "darwin" || process.arch !== "arm64" || Number(release().split(".")[0]) < 25) return false;
   try { return Bun.spawnSync(["container", "image", "inspect", IMAGE], { stdout: "ignore", stderr: "ignore" }).exitCode === 0; }
@@ -33,7 +31,7 @@ const addressOf = (info?: Info) => info?.status?.state === "running" ? info.stat
 /** The computer's address now. It changes whenever the computer restarts, and is undefined while it is stopped. */
 export const appleAddress = async (name: string) => addressOf(await inspect(name));
 
-/** Start (creating on first use) the named computer and attach to it. Its token lives in the container's own settings. */
+/** Start (creating on first use) and attach. The token lives in the container's own environment. */
 export async function appleComputer(name: string): Promise<{ sb: SandboxLike; address: string }> {
   let info = await inspect(name);
   if (!info) {
@@ -49,5 +47,10 @@ export async function appleComputer(name: string): Promise<{ sb: SandboxLike; ad
   return { sb: await embedded().sandboxes().connectUrl(`http://${address}:3211`, token, name), address };
 }
 
-/** Stop the computer; its files stay for next time. */
 export const stopAppleComputer = (name: string) => run("stop", name).then(() => {});
+
+/** A hung VM ignores `container stop` and `kill`, so end its runtime process instead; files stay. */
+export async function restartAppleComputer(name: string) {
+  await Bun.$`pkill -f ${`container-runtime-linux start .* --uuid ${name}$`}`.quiet().nothrow();
+  for (let i = 0; i < 20 && addressOf(await inspect(name)); i++) await Bun.sleep(500);
+}

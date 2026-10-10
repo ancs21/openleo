@@ -1,10 +1,5 @@
-// The board's notes, kept as plain Markdown in its computer's workspace (the same files other agent tools read):
-//   AGENTS.md  about this board: what it's for, rules, where files go   (the user writes it)
-//   SOUL.md    personality: tone, voice, limits                         (the user writes it)
-//   USER.md    about the user                                           (the user, and agents as they learn)
-//   MEMORY.md  long-term memory, kept short                             (agents and the user)
-//   memory/YYYY-MM-DD.md  daily notes agents add with `remember`
-// Before every model request an agent gets the notes (each cut to a size) and today's and yesterday's daily notes. Older daily notes stay in the computer for the agent to search.
+// The board's notes, plain Markdown in its computer's workspace: AGENTS.md, SOUL.md, USER.md, MEMORY.md and daily memory/YYYY-MM-DD.md.
+// Each model request gets the notes (each capped) plus today's and yesterday's daily notes; older ones stay for the agent to search.
 import { Type } from "@earendil-works/pi-ai";
 import { defineTool } from "../infra/runtime";
 import { currentBoard, GUEST_WORKSPACE, sbWrite, shq } from "../infra/sandbox";
@@ -19,7 +14,6 @@ const LIMIT: Record<NoteKey, number> = { agents: 8000, soul: 4000, user: 4000, m
 const DAY_LIMIT = 3000; // the newest part of a day's notes
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** A date as YYYY-MM-DD in this machine's time zone, `back` days ago. */
 const day = (back = 0) => new Date(Date.now() - back * 86_400_000).toLocaleDateString("sv");
 
 /** Split a script's output, where each file starts with a "@@NOTE <path>" line, into path -> text. */
@@ -28,7 +22,6 @@ const byFile = (out: string) => new Map(out.split("\n@@NOTE ").slice(1).map((par
   return [i < 0 ? part : part.slice(0, i), i < 0 ? "" : part.slice(i + 1).trim()] as const;
 }));
 
-/** Read the four notes and the last week's daily notes, for the board's Notes screen. */
 export async function readNotes(): Promise<BoardNotes> {
   const out = await shell(`for f in ${Object.values(NOTES).join(" ")}; do printf '\\n@@NOTE %s\\n' "$f"; cat "$f" 2>/dev/null; done
 for f in $(ls -r memory/*.md 2>/dev/null | head -7); do printf '\\n@@NOTE %s\\n' "$f"; cat "$f"; done`);
@@ -52,17 +45,11 @@ export async function deleteDay(date: string) {
   forgetContext();
 }
 
-// ---- What an agent sees ----
-
 const cache = new Map<string, { at: number; text: Promise<string> }>();
 const cacheKey = () => `${currentTenant()}/${currentBoard()}`;
-/** Drop the current board's cached notes after a change, so the next request reads them again. */
 const forgetContext = () => void cache.delete(cacheKey());
 
-/**
- * The board's notes as a prompt section, read from its computer at most every 10 seconds
- * (an agent makes many requests in one run).
- */
+/** The notes as a prompt section, cached for 10 seconds since an agent makes many requests in one run. */
 export function boardContext(): Promise<string> {
   const key = cacheKey();
   const hit = cache.get(key);
@@ -116,8 +103,6 @@ export function rememberTool(agent: string, card?: string) {
     },
   });
 }
-
-// ---- Nightly tidy ----
 
 export const TIDY_TITLE = "Tidy this board's memory";
 export const TIDY_NOTES = "Every night: fold the past days' notes into Memory, then file them away in memory/archive.";

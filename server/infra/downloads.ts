@@ -2,7 +2,7 @@
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 
-/** Save `bytes` as `name` in Downloads, never overwriting a file there. Returns where it went. */
+/** Never overwrites; returns the saved path. */
 export async function saveToDownloads(fileName: string, bytes: Uint8Array) {
   const name = fileName.replace(/[^\w.\- ]/g, "_");
   const dot = name.lastIndexOf("."), stem = dot > 0 ? name.slice(0, dot) : name, ext = dot > 0 ? name.slice(dot) : "";

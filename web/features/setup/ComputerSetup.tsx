@@ -1,6 +1,5 @@
-// Onboarding for the agents' computer: on a machine without one yet, walks its owner through getting one, step by step.
-// Apple's container tool on Macs that can run it (native and fast), Docker otherwise (any Mac, Linux or Windows PC). OpenLeo does every
-// step it can itself; installing the tool is the one step people do (open an installer), then press Check again.
+// Sets up the agents' computer: Apple's container tool where it runs, Docker otherwise.
+// OpenLeo does every step it can; installing the tool is the one step people do, then press Check again.
 import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "../../components/Button";
 import { Icon, glyphs } from "../../components/Icon";
@@ -22,7 +21,6 @@ const APPLE_DOWNLOAD = "https://github.com/apple/container/releases/latest";
 const DOCKER_DOWNLOAD = "https://www.docker.com/products/docker-desktop/";
 const WORKING = { start: "Turning it on…", build: "Setting up the computer… This takes a few minutes." };
 
-/** Checks this machine once when the app opens, shows the dialog when there's no computer yet, and runs it. */
 export function ComputerSetup() {
   const { setupOpen, setSetup } = useApp();
   const [status, setStatus] = useState<Status>();
@@ -34,7 +32,7 @@ export function ComputerSetup() {
     return s;
   }, (e) => void setError((e as Error).message));
 
-  // On open of the app: no computer on this machine yet, so nothing an agent does will work. Say so right away.
+  // No computer on this machine yet, so nothing an agent does will work: say so right away.
   useEffect(() => { void check().then((s) => { if (s?.manage && !s.ready) setSetup({ setupOpen: true }); }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // While open: follow a running step closely, and notice an install or Docker starting.

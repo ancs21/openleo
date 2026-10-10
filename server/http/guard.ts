@@ -1,5 +1,4 @@
-// What every route shares: errors as `{ error }` JSON, sign-in and same-origin checks, the account and board a
-// request runs in, and checks on what the page sends.
+// Shared route helpers: JSON errors, sign-in and same-origin checks, account and board scoping, input checks.
 import { BOARD_ID, hasBoard, MAIN_BOARD } from "../app/boards";
 import { LimitError } from "../infra/limits";
 import { inBoard } from "../infra/sandbox";
@@ -13,16 +12,15 @@ export const CONVERSATION = /^[\w-]{1,64}$/;
 
 export const err = (e: unknown, status = 400) => Response.json({ error: (e as Error).message }, { status });
 
-/** Route handler whose thrown errors become `{ error }` JSON responses with `status` (429 for a reached limit). */
+/** Thrown errors become `{ error }` JSON with `status` (429 for a reached limit). */
 export const safe = <R extends Request>(handler: (req: R) => Response | Promise<Response>, status = 400) =>
   async (req: R) => { try { return await handler(req); } catch (e) { return err(e, e instanceof LimitError ? 429 : status); } };
 
-/** Routes anyone may call: signing in, and the live desktop's relay (the computer checks its ticket). Page files (HTML imports) are public too. */
+/** Routes anyone may call; the desktop relay is checked by the computer's ticket. Page files are public too. */
 const PUBLIC = new Set(["/api/me", "/api/auth/config", "/api/auth/chatgpt/login", "/auth/callback", "/sbproxy/*"]);
 const METHODS = /^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$/;
 type Handler = (req: any, server: any) => Response | Promise<Response>;
 
-/** Public sign-in routes, limited per visitor; errors become `{ error }` like safe(). */
 export function limited(handler: (req: Request) => Response | Promise<Response>): Handler {
   return async (req, srv) => {
     if (!allowAttempt(visitorIp(req, srv))) return err(new Error("Too many sign-in attempts. Wait a few minutes and try again."), 429);
@@ -37,7 +35,7 @@ export function requestTenant(req: Request) {
   return fromOwnersDevice(req) ? ownerTenant() : undefined;
 }
 
-/** Every route except PUBLIC needs a signed-in session and runs as that account's tenant; changes must come from OpenLeo's own pages. */
+/** All but PUBLIC need a session and run as its tenant; changes must come from OpenLeo's own pages. */
 export function protect<P extends string>(routes: Bun.Serve.Routes<undefined, P>): Bun.Serve.Routes<undefined, P> {
   const guard = (h: Handler): Handler => (req, srv) => {
     const tenant = requestTenant(req);
@@ -56,25 +54,22 @@ export function protect<P extends string>(routes: Bun.Serve.Routes<undefined, P>
   })) as Bun.Serve.Routes<undefined, P>;
 }
 
-/** Board id from a route param or ?board=, checked to exist. */
 export function boardParam(bid: string | null | undefined) {
   const b = bid || MAIN_BOARD;
   if (!BOARD_ID.test(b) || !hasBoard(b)) throw new Error(`no board "${b}"`);
   return b;
 }
 
-/** A route that runs inside the board in its URL (agents, their chats and skills belong to a board). */
 export const onBoard = <R extends Request & { params: { board: string } }>(handler: (req: R) => Response | Promise<Response>) =>
   (req: R) => inBoard(boardParam(req.params.board), () => handler(req));
 
-/** Run `fn` in a board's computer and answer with its result as JSON. */
 export async function inComputer<T>(board: string, fn: () => Promise<T>) {
   const bid = boardParam(board);
   if (!SANDBOXED) throw new Error("notes live in the board's computer, and computers are off (OPENLEO_SANDBOX=off)");
   return Response.json(await inBoard(bid, fn));
 }
 
-/** Image attachments (e.g. "Teach a task" keyframes) arrive as data: URLs. Cap count and size. */
+/** Images arrive as data: URLs; cap count and size. */
 export function parseImages(v: unknown) {
   if (!Array.isArray(v)) return [];
   if (v.length > 8) throw new Error("at most 8 images");

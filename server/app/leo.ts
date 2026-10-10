@@ -1,5 +1,4 @@
-// Leo: the built-in assistant of each board. People chat with it to manage the board (cards, lists, fields,
-// which agent works on what); it hands the real work to the board's agents. It has no computer of its own.
+// Leo: each board's built-in assistant. It manages the board and hands real work to the board's agents; it has no computer.
 import { Type } from "@earendil-works/pi-ai";
 import { FIELD_TYPES } from "../../shared/fields";
 import { LEO, type AgentDef } from "../../shared/types";
@@ -9,20 +8,18 @@ import { leoSettings } from "../infra/leo-settings";
 
 export { LEO } from "../../shared/types";
 
-const INSTRUCTIONS = `You are Leo, the assistant built into this board. You manage the board for the user: add, edit and move cards,
-add and rename lists, choose which agent picks up new cards in a list, add fields and fill them in, start agents on cards,
-create a new agent when no agent on the board fits a job (ask what it should do first if that isn't clear),
-and change an agent's description or instructions when asked (read it first, keep what the user didn't ask to change).
-Read the board first when you need to know what's on it. Cards are tasks that agents work on; you don't do the tasks yourself,
-you set them up and start the right agent. Refer to cards by number (#12). Keep replies short and plain; say what you changed.
+const INSTRUCTIONS = `You are Leo, the assistant built into this board. You see the board as it is right now below.
+Do what the user asks, nothing more:
+- A question (about the board, a card, or anything else): answer it. Read a card in full with read_card; look things up with web search.
+- A change to cards, lists, fields or agents: make it, then say what changed.
+- Add cards or start an agent only when the user asks for it.
+Refer to cards by number (#12). Keep replies short and plain.
 You can't delete cards, lists or fields: tell the user to do that themselves.`;
 
-/** Leo as an agent definition (it isn't stored with the user's agents). */
 export const leoDef = (): AgentDef => ({ name: LEO, description: "Manages this board", ...leoSettings(), instructions: INSTRUCTIONS, subagents: [], mcp: [] });
 
 const text = (t: string) => ({ content: [{ type: "text" as const, text: t }], details: {} });
 
-/** Everything on the board, as text: lists, fields, cards and the agents there are. */
 function describe(bid: string, agents: AgentDef[]) {
   const b = getBoard(bid);
   const fields = b.fields ?? [];
@@ -42,24 +39,33 @@ function describe(bid: string, agents: AgentDef[]) {
   return lines.join("\n");
 }
 
-type NewAgent = { name: string; title?: string; description: string; instructions: string };
-type AgentPatch = { title?: string; description?: string; instructions?: string };
-/** The tools Leo uses on board `bid`. `run` starts an agent on a card; `agents` lists the board's agents; `create` saves a new one, `update` changes one. */
-export function leoTools(bid: string, { run, agents, create, update }: {
-  run: (cid: string, agent: string) => void; agents: () => AgentDef[];
-  create: (a: NewAgent) => Promise<AgentDef>; update: (name: string, patch: AgentPatch) => Promise<AgentDef>;
-}) {
-  const agentNamed = (name: string) => {
-    const a = agents().find((x) => x.name === name);
-    if (!a) throw new Error(`no agent "${name}"; the agents are: ${agents().map((x) => x.name).join(", ") || "none"}`);
-    return a.name;
-  };
+/** The board right now, for Leo's context on every turn (so it doesn't have to read it first). */
+export const boardNow = (bid: string, agents: AgentDef[]) => `The board right now:\n${describe(bid, agents)}`;
+
+/** Board tools for Leo and agents. Without `run` (an agent), new cards don't start the list's agent, so agents can't set each other off in a loop. */
+export function cardTools(bid: string, agents: () => AgentDef[], run?: (cid: string, agent: string) => void) {
   return [
     defineTool({
       name: "read_board", label: "Read board",
       description: "Everything on this board: its lists (and their agents), fields, cards with status and field values, and the agents there are.",
       parameters: Type.Object({}),
       execute: async () => text(describe(bid, agents())),
+    }),
+    defineTool({
+      name: "read_card", label: "Read card",
+      description: "One card (by number) in full: its list, status, agent, notes, field values and the agent's latest result.",
+      parameters: Type.Object({ card: Type.Number() }),
+      execute: async (_id, { card }) => {
+        const b = getBoard(bid), c = findCard(bid, card);
+        const list = b.lists.find((l) => l.cards.includes(c.id))?.title;
+        const values = (b.fields ?? []).filter((f) => c.values?.[f.id]).map((f) => `- ${f.name}: ${c.values![f.id]}`);
+        return text([
+          `#${c.num} ${c.title} [${c.status}${c.agent ? `, ${c.agent}` : ""}]${list ? ` in ${list}` : ""}`,
+          c.notes.trim() && `Notes:\n${c.notes.trim()}`,
+          values.length && `Fields:\n${values.join("\n")}`,
+          c.result && `Result:\n${c.result}`,
+        ].filter(Boolean).join("\n\n"));
+      },
     }),
     defineTool({
       name: "add_cards", label: "Add cards",
@@ -74,10 +80,11 @@ export function leoTools(bid: string, { run, agents, create, update }: {
           const card = addCard(bid, l.id, c.title, c.notes);
           const set = c.fields ? setCardFields(bid, card.id, c.fields) : [];
           // In a list with an agent, that agent starts on it, as when a person adds it (if it can't, the card's history says why).
-          if (l.agent) try { run(card.id, l.agent); } catch {}
+          if (l.agent && run) try { run(card.id, l.agent); } catch {}
           return `#${card.num} ${card.title}${set.length ? ` (${set.join("; ")})` : ""}`;
         });
-        return text(`Added to ${l.title}${l.agent ? `, where ${l.agent} starts on them` : ""}:\n${done.join("\n")}`);
+        const who = !l.agent ? "" : run ? `, where ${l.agent} starts on them` : `; ${l.agent} doesn't start on cards an agent adds`;
+        return text(`Added to ${l.title}${who}:\n${done.join("\n")}`);
       },
     }),
     defineTool({
@@ -95,6 +102,22 @@ export function leoTools(bid: string, { run, agents, create, update }: {
         return text(`Updated #${c.num}${to ? `, now in ${to.title}` : ""}${set.length ? `: ${set.join("; ")}` : ""}`);
       },
     }),
+  ];
+}
+
+type NewAgent = { name: string; title?: string; description: string; instructions: string };
+type AgentPatch = { title?: string; description?: string; instructions?: string };
+export function leoTools(bid: string, { run, agents, create, update }: {
+  run: (cid: string, agent: string) => void; agents: () => AgentDef[];
+  create: (a: NewAgent) => Promise<AgentDef>; update: (name: string, patch: AgentPatch) => Promise<AgentDef>;
+}) {
+  const agentNamed = (name: string) => {
+    const a = agents().find((x) => x.name === name);
+    if (!a) throw new Error(`no agent "${name}"; the agents are: ${agents().map((x) => x.name).join(", ") || "none"}`);
+    return a.name;
+  };
+  return [
+    ...cardTools(bid, agents, run).filter((t) => t.name !== "read_board"), // Leo sees the board already
     defineTool({
       name: "set_list", label: "Set up list",
       description: "Add a list, or change one (by name): rename it, or choose the agent that starts on every new card added to it (agent \"\" = nobody).",
@@ -115,7 +138,7 @@ export function leoTools(bid: string, { run, agents, create, update }: {
     }),
     defineTool({
       name: "create_agent", label: "Create agent",
-      description: "Create a new agent on this board for a job none of its agents does. It can search the web, read pages, save files, run commands and use the board's computer.",
+      description: "Create a new agent on this board for a job none of its agents does (if what it should do isn't clear, ask the user first). It can search the web, read pages, save files, run commands and use the board's computer.",
       parameters: Type.Object({
         name: Type.String({ description: "its ID: short, lowercase letters, digits and dashes, e.g. lead-researcher" }),
         title: Type.Optional(Type.String({ description: "the name people see, e.g. Lead Researcher" })),

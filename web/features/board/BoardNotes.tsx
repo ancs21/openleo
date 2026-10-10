@@ -20,7 +20,7 @@ const NOTE_FIELDS = [
   { key: "memory", title: "Memory", hint: "What agents should keep in mind. They add to it as they work; change or delete anything.", placeholder: "Nothing yet. Agents add what they learn here." },
 ] as const;
 
-/** A board's notes and memory: plain files in its computer that every agent on the board reads. (Skills belong to each agent.) */
+/** Plain files in the board's computer that every agent on the board reads. */
 export function BoardNotes({ board, onClose }: { board: string; onClose: () => void }) {
   const [notes, setNotes] = useState<Notes>();
   const [error, setError] = useState<string>();
@@ -44,7 +44,6 @@ export function BoardNotes({ board, onClose }: { board: string; onClose: () => v
   );
 }
 
-/** One note file: edit it, and it saves when you leave the box. */
 function NoteField({ title, hint: help, placeholder, value, onSave }: { title: string; hint: string; placeholder: string; value: string; onSave: (text: string) => Promise<void> }) {
   const [state, setState] = useState<"idle" | "saving" | "saved" | Error>("idle");
   return (
@@ -69,7 +68,7 @@ function NoteField({ title, hint: help, placeholder, value, onSave }: { title: s
   );
 }
 
-/** The nightly tidy: a repeating card on this board whose agent folds the daily notes into Memory. */
+/** A repeating card whose agent folds the daily notes into Memory each night. */
 function TidySwitch({ board }: { board: string }) {
   const card = useBoard((s) => Object.values(s.board?.cards ?? {}).find((c) => c.kind === "task" && c.schedule?.agent === MEMORY_KEEPER));
   const on = card?.kind === "task" && !!card.schedule && !card.schedule.paused;
@@ -97,7 +96,6 @@ function TidySwitch({ board }: { board: string }) {
   );
 }
 
-/** The daily notes agents wrote, newest first, each day with Forget. */
 function RecentNotes({ days, onForget }: { days: Notes["days"]; onForget: (date: string) => Promise<void> }) {
   const [forgetting, setForgetting] = useState<string>();
   return (

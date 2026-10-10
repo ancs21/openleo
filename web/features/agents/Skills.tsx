@@ -11,8 +11,7 @@ import { empty } from "../../components/form";
 import { Group, Info, Label, LinkButton, Section } from "../../components/form";
 import { titleOf } from "./templates";
 
-// An agent's skills: each from the open skills.sh directory or written by hand. The agent's definition keeps
-// the list; the files go into the computer of whichever board the agent works on (server/app/skills.ts).
+// The agent's definition keeps its skill list; the files go into the computer of the board it works on.
 
 const section = "flex flex-col gap-2";
 const heading = "text-[13.5px] font-semibold text-ink";
@@ -25,7 +24,6 @@ const skillName = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").rep
 type View = { kind: "find" } | { kind: "preview"; id: string } | { kind: "write"; skill?: AgentSkill };
 const TITLES = { find: "Add a skill", preview: "Check this skill", write: "Write a skill" };
 
-/** The agent editor's Skills: the agent's own list, with Add a skill (find on skills.sh, or write one). */
 export function SkillsSection({ skills, onChange }: { skills: AgentSkill[]; onChange: (skills: AgentSkill[]) => void }) {
   const [view, setView] = useState<View>();
   const put = (s: AgentSkill) => { onChange([...skills.filter((x) => x.name !== s.name), s]); setView(undefined); };
@@ -62,7 +60,6 @@ export function SkillsSection({ skills, onChange }: { skills: AgentSkill[]; onCh
 
 const ProgramsTag = () => <span title="Brings programs that run in this board's computer" className="shrink-0 rounded-chip bg-inset px-1.5 py-0.5 text-[11.5px] font-medium text-ink-2 shadow-hairline">Runs programs</span>;
 
-/** Search the open skills directory (skills.sh); picking a result opens its preview. */
 function FindSkills({ onPick, onWrite, added }: { onPick: (id: string) => void; onWrite: () => void; added: string[] }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<SkillResult[] | "failed">();
@@ -140,7 +137,6 @@ function Preview({ id, onAdd }: { id: string; onAdd: (skill: SkillPreview) => vo
   );
 }
 
-/** Write a skill, or edit one: it becomes a SKILL.md in the computer of each board the agent works on. */
 function SkillForm({ skill, taken, onSave, onCancel }: { skill?: AgentSkill; taken: string[]; onSave: (s: Skill) => void; onCancel: () => void }) {
   const [title, setTitle] = useState(skill ? titleOf(skill.name) : "");
   const [description, setDescription] = useState(skill?.description ?? "");

@@ -1,4 +1,3 @@
-// Pick an icon for a name (a list's title, an agent's name and description) with the fast model.
 import { ICONS } from "../../shared/icons";
 import { askFast } from "../infra/fast";
 

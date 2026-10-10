@@ -5,7 +5,6 @@ const WINDOW_MS = 10 * 60_000;
 const MAX = 30;
 const hits = new Map<string, number[]>();
 
-/** Record an attempt from `who`; false once it made MAX in the last ten minutes. */
 export function allowAttempt(who: string, now = Date.now()) {
   const recent = (hits.get(who) ?? []).filter((t) => now - t < WINDOW_MS);
   const ok = recent.length < MAX;

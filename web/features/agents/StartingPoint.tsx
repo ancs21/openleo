@@ -6,7 +6,6 @@ import { Segmented } from "../../components/Segmented";
 import { api, json } from "../../lib/api";
 import { TEMPLATES, titleOf } from "./templates";
 
-/** Fill the new-agent form from a description (the model drafts it) or from a template. */
 export function StartingPoint({ model, onApply }: { model: string; onApply: (def: AgentDef) => void }) {
   const [mode, setMode] = useState<"describe" | "template">("describe");
   const [text, setText] = useState("");

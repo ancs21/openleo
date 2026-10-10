@@ -1,5 +1,4 @@
-// Five tiny Web Audio voices, no audio files. One capturing click listener picks a voice per control,
-// and play() lets the app sound agent events. Off switch: localStorage "openleo-sounds" = "off".
+// Tiny Web Audio voices, no audio files. Off switch: localStorage "openleo-sounds" = "off".
 
 type Voice = {
   source: { type: "sine" | "square" | "noise"; frequency?: number | { start: number; end: number } };
@@ -96,7 +95,7 @@ function voiceFor(el: Element): SoundName {
   return "press";
 }
 
-/** Install the global click sounds once. Mark a subtree with data-sound-silent to mute it. */
+/** Mark a subtree with data-sound-silent to mute it. */
 export function installInteractionSounds() {
   document.addEventListener("click", (e) => {
     const el = e.target instanceof Element ? e.target.closest(CONTROL) : null;

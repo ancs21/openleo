@@ -1,15 +1,10 @@
-// Agent tools run inside cua sandboxes (https://cua.ai/docs/cua-sdk): one persistent Linux desktop per board
-// (the board's "computer"), reattached by name across restarts. It has an XFCE desktop, so agents also get
-// computer use. A run says which board it belongs to with inBoard(); tools then reach that board's computer.
-//   OPENLEO_SANDBOX=off           run tools on the host instead (no computer use)
-//   OPENLEO_SANDBOX_ON=cloud      run the sandbox in the Cua cloud (needs `bunx cua auth login` or CUA_CLIENT_ID/SECRET)
-//   OPENLEO_SANDBOX_ON=apple      run it on Apple's container runtime (macOS 26+, infra/apple-container.ts)
-//   OPENLEO_SANDBOX_ON=local      run it in Docker
-//   unset: Apple's runtime when this Mac has it (appleAvailable), otherwise Docker
-//   OPENLEO_SANDBOX_IMAGE=...     e.g. ghcr.io/trycua/linux:24.04-slim-disk for a VM instead of a container,
-//                                 or ghcr.io/trycua/macos:26-slim for a macOS VM (runs on Lume, about 24 GB to download)
+// Agent tools run in one persistent cua Linux desktop per board (its "computer"), reattached by name across restarts.
+//   OPENLEO_SANDBOX=off                    run tools on the host (no computer use)
+//   OPENLEO_SANDBOX_ON=apple|local|cloud   Apple's container tool, Docker, or cua cloud (`bunx cua auth login`);
+//                                          unset: apple when appleAvailable(), else Docker
+//   OPENLEO_SANDBOX_IMAGE=...              another image, e.g. a cua VM or macOS image
 import { AsyncLocalStorage } from "node:async_hooks";
-import { appleAddress, appleAvailable, appleComputer, stopAppleComputer } from "./apple-container";
+import { appleAddress, appleAvailable, appleComputer, restartAppleComputer, stopAppleComputer } from "./apple-container";
 import { MAIN_BOARD } from "../core/board";
 import { computerOf } from "./board-store";
 import { CLOUD_IMAGE, DOCKER_IMAGE, SANDBOX_ON_SETTING, SANDBOXED } from "./config";
@@ -17,12 +12,11 @@ import { computerSize } from "./limits";
 import { currentTenant } from "./tenant";
 import { embedded, ImageFormat, SandboxCreateOptions, ScreenshotOptions, ViewerOptions, type SandboxLike, type SpacesdClientLike } from "@trycua/cua";
 
-/** Where computers run: as set, or natively on this Mac when it can, or Docker. */
 export type Runtime = "apple" | "local" | "cloud";
 export const pickRuntime = (on: string | undefined, apple: () => boolean): Runtime =>
   on === "cloud" || on === "apple" || on === "local" ? on : apple() ? "apple" : "local";
 export let SANDBOX_ON: Runtime = pickRuntime(SANDBOX_ON_SETTING, appleAvailable);
-/** Choose again after setup on this Mac (Apple's tool turned on, its image built); failed computers retry on next use. */
+/** Re-pick after setup on this Mac; failed computers retry on next use. */
 export const repickRuntime = () => { SANDBOX_ON = pickRuntime(SANDBOX_ON_SETTING, appleAvailable); };
 export const MACOS = DOCKER_IMAGE.includes("/macos:");
 export const GUEST_HOME = MACOS ? "/Users/lume" : "/home/openleo";
@@ -42,7 +36,7 @@ const states = new Map<string, ComputerState>();
 const keyOf = (board: string) => `${currentTenant()}/${board}`;
 export const computerState = (board: string): ComputerState => states.get(keyOf(board)) ?? { state: "off", name: computerOf(board) };
 
-/** The computer's control service. A new computer takes a few seconds to start it, so keep asking for up to a minute. */
+/** A new computer takes a few seconds to start its control service, so retry for up to a minute. */
 async function spacesdOf(sb: SandboxLike): Promise<SpacesdClientLike> {
   for (let tries = 1; ; tries++) {
     try { return await sb.spacesd(undefined); }
@@ -50,7 +44,6 @@ async function spacesdOf(sb: SandboxLike): Promise<SpacesdClientLike> {
   }
 }
 
-/** Attach to the named computer, creating it on first use. */
 async function attach(name: string): Promise<Omit<Computer, "sp">> {
   if (SANDBOX_ON === "apple") return appleComputer(name);
   const sbs = embedded().sandboxes();
@@ -60,7 +53,7 @@ async function attach(name: string): Promise<Omit<Computer, "sp">> {
 
 const HINTS = { apple: "run `container system start`", cloud: "run `bunx cua auth login`", local: "is Docker/Colima running?" };
 
-/** Connect to (or create on first use) a board's computer, for the current tenant. Retries on the next call if it fails. */
+/** Creates the computer on first use; after a failure the next call tries again. */
 export function sandbox(board = currentBoard()) {
   const key = keyOf(board);
   let handle = handles.get(key);
@@ -83,7 +76,7 @@ export function sandbox(board = currentBoard()) {
   return handle;
 }
 
-/** Pause a board's computer (its files stay; cua's own tools can erase it for good). */
+/** Its files stay. */
 export async function pauseComputer(board: string) {
   const key = keyOf(board);
   const handle = handles.get(key);
@@ -94,16 +87,24 @@ export async function pauseComputer(board: string) {
   else await live?.sb.suspend().catch(() => {});
 }
 
-/**
- * Use the current board's computer. An Apple computer gets a new address when it restarts behind our back
- * (its service restarted, it crashed), so when a call fails and the address has moved, reconnect and try once more.
- */
+const restarts = new Map<string, Promise<void>>();
+
+/** Does the computer still answer at all? A failed call alone can't tell a hung computer from a slow app. */
+const answers = (sp: SpacesdClientLike) => withTimeout(sp.sh("true", 5_000), 10_000, "check").then(() => true, () => false);
+
+/** When an Apple computer call fails: reconnect if its address changed, restart it if hung, then try once more. */
 async function withComputer<T>(fn: (c: Computer) => Promise<T>): Promise<T> {
-  const board = currentBoard(), key = keyOf(board);
+  const board = currentBoard(), key = keyOf(board), name = computerOf(board);
   const handle = sandbox(board), c = await handle;
   try { return await fn(c); }
   catch (e) {
-    if (!c.address || (await appleAddress(computerOf(board)).catch(() => c.address)) === c.address) throw e;
+    if (!c.address) throw e;
+    if ((await appleAddress(name).catch(() => c.address)) === c.address) {
+      if (await answers(c.sp)) throw e;
+      // One restart at a time per computer: the screen keeps asking while it's hung, so calls pile up here.
+      if (!restarts.has(key)) restarts.set(key, restartAppleComputer(name).finally(() => restarts.delete(key)));
+      await restarts.get(key);
+    }
     if (handles.get(key) === handle) handles.delete(key); // another call may already have reconnected
     return fn(await sandbox(board));
   }
@@ -125,7 +126,6 @@ export async function sbRead(path: string) {
   return decode(await withComputer(({ sp }) => sp.download(guestPath(path))));
 }
 
-/** A file's bytes, as they are (pictures, documents). */
 export async function sbReadBytes(path: string) {
   return new Uint8Array(await withComputer(({ sp }) => sp.download(guestPath(path))));
 }
@@ -140,8 +140,6 @@ export async function sbWrite(path: string, content: string) {
   return bytes.length;
 }
 
-// ---- Computer use ----
-
 export type ComputerAction = {
   action: "screenshot" | "click" | "double_click" | "right_click" | "move" | "drag" | "type" | "key" | "scroll";
   x?: number; y?: number; to_x?: number; to_y?: number; text?: string; keys?: string[]; dx?: number; dy?: number;
@@ -154,10 +152,8 @@ function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
     .finally(() => clearTimeout(t));
 }
 
-/** Typing takes longer for long text; everything else gets a flat limit. */
 export const actionTimeoutMs = (a: ComputerAction) => (a.action === "type" ? Math.min(120_000, 15_000 + (a.text?.length ?? 0) * 60) : 30_000);
 
-/** Run one desktop action (mouse/keyboard), with a timeout. */
 export const sbAct = (a: ComputerAction) => withComputer(({ sp }) => withTimeout(runAction(sp, a), actionTimeoutMs(a), a.action));
 
 async function runAction(sp: SpacesdClientLike, a: ComputerAction) {
@@ -178,7 +174,6 @@ async function runAction(sp: SpacesdClientLike, a: ComputerAction) {
   }
 }
 
-/** Run one desktop action, then return a fresh screenshot (JPEG) so the model sees the result. */
 export async function sbComputer(a: ComputerAction) {
   await sbAct(a);
   if (a.action !== "screenshot") await Bun.sleep(400); // let the UI settle before looking

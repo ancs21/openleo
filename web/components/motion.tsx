@@ -3,7 +3,6 @@ import { glyphs } from "./Icon";
 
 export const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
 
-/** A light sweep across text while work is in progress. */
 export function Shimmer({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <span className={`bg-clip-text whitespace-nowrap text-transparent ${className}`}
@@ -13,7 +12,6 @@ export function Shimmer({ children, className = "" }: { children: ReactNode; cla
   );
 }
 
-/** `className` sets size and colours where the default (small, on a light surface) doesn't fit. */
 export function Spinner({ className = "size-3 border-line-strong border-t-ink-2" }: { className?: string }) {
   return <span className={`shrink-0 rounded-full border-[1.5px] animate-spin-fast ${className}`} />;
 }

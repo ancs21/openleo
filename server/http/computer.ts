@@ -1,4 +1,4 @@
-// A board's computer: its state, starting it, files agents linked in replies, the live screen and desktop viewer.
+// A board's computer: state, startup, files agents link, the live screen and the desktop viewer.
 import { HOST, isLoopback, PUBLIC_URL, SANDBOXED } from "../infra/config";
 import { computerSetup, setupStep } from "../app/computers";
 import { saveToDownloads } from "../infra/downloads";
@@ -9,9 +9,7 @@ import { boardParam, err, safe } from "./guard";
 
 let viewerOrigin: string | null = null; // cua-spacesd viewer origin, learned when a viewer link is minted
 
-/** A relayed live connection: the browser's side here, the computer's side in `up`. */
 type ViewerSocket = { target: string; protocol?: string; up?: WebSocket; queue: (string | Uint8Array<ArrayBuffer>)[] };
-/** Pass the viewer's live connection both ways between the browser and the computer. Both servers use it. */
 const relaySocket: Bun.WebSocketHandler<ViewerSocket> = {
   open(ws) {
     const up = new WebSocket(ws.data.target, ws.data.protocol ? [ws.data.protocol] : []);
@@ -34,7 +32,6 @@ export const onThisMac = (req: Request) => HOST === "127.0.0.1" && !viaTailnet(r
 const canSetUp = onThisMac;
 
 export const computerRoutes = {
-  // Getting a computer for agents on this Mac (the onboarding the app shows when there's none yet).
   "/api/setup": {
     GET: safe(async (req) => {
       const setup = await computerSetup();
@@ -48,8 +45,7 @@ export const computerRoutes = {
       return Response.json({ ...(await computerSetup()), manage: true });
     }),
   },
-  // A file in the board's computer that an agent linked in its reply, so the app can show it.
-  // Served as a sandboxed download-safe response: an SVG or HTML file can't run script on OpenLeo's origin.
+  // Served download-safe and sandboxed so an SVG or HTML file can't run script on OpenLeo's origin.
   "/api/boards/:board/computer/file": {
     GET: safe(async (req: Bun.BunRequest<"/api/boards/:board/computer/file">) => {
       const bid = boardParam(req.params.board);
@@ -64,8 +60,7 @@ export const computerRoutes = {
       } });
     }, 404),
   },
-  // The Mac app's web view can't download: there, a file is saved to this Mac's Downloads folder and shown in Finder.
-  // Only for the owner of an OpenLeo that runs on this Mac (not one reached over the network).
+  // The Mac app's web view can't download, so save to Downloads and show in Finder. Owner on this Mac only.
   "/api/boards/:board/computer/file/save": {
     POST: safe(async (req: Bun.BunRequest<"/api/boards/:board/computer/file/save">) => {
       const bid = boardParam(req.params.board);
@@ -78,7 +73,6 @@ export const computerRoutes = {
   },
   "/api/boards/:board/computer": {
     GET: safe((req: Bun.BunRequest<"/api/boards/:board/computer">) => Response.json(computerState(boardParam(req.params.board))), 404),
-    // Start (or retry) the computer.
     POST: safe(async (req: Bun.BunRequest<"/api/boards/:board/computer">) => {
       const bid = boardParam(req.params.board);
       if (!SANDBOXED) throw new Error("sandbox is off");
@@ -87,7 +81,6 @@ export const computerRoutes = {
     }, 503),
   },
   "/api/sandbox": { GET: () => Response.json({ sandboxed: SANDBOXED, on: SANDBOX_ON }) },
-  // Live frame for the Agent Screen card/dock (polled by the UI). ?board= picks the board's computer.
   "/api/sandbox/screen": safe(async (req) => {
     if (!SANDBOXED) return err(new Error("sandbox is off"), 404);
     const bid = boardParam(new URL(req.url).searchParams.get("board"));
@@ -97,8 +90,7 @@ export const computerRoutes = {
   "/api/sandbox/viewer": {
     POST: safe(async (req) => {
       if (!SANDBOXED) return err(new Error("sandbox is off"), 404);
-      // The viewer connects the browser straight to the computer, and local computers only listen on the server:
-      // from another device through Tailscale it goes through OpenLeo instead (/sbproxy/).
+      // Local computers only listen on this machine, so other devices reach the viewer through /sbproxy/.
       const relay = viaTailnet(req) && SANDBOX_ON !== "cloud";
       if (!relay && !isLoopback(PUBLIC_URL.hostname) && SANDBOX_ON !== "cloud") {
         return err(new Error("The live desktop isn't available on a hosted OpenLeo with local computers. Ask the operator to use cloud computers (OPENLEO_SANDBOX_ON=cloud)."), 503);
@@ -106,14 +98,12 @@ export const computerRoutes = {
       const bid = boardParam(new URL(req.url).searchParams.get("board"));
       const url = new URL(await inBoard(bid, () => sbViewerUrl()));
       viewerOrigin = url.origin;
-      // Same viewer, served from our origin so it can be framed; it talks to the computer via `base`.
       const base = relay ? `${tailnetOrigin()}/sbproxy/` : `${url.origin}/`;
       const embed = `/sbviewer/${url.hash}&base=${encodeURIComponent(base)}`;
       return Response.json({ url: relay ? `${tailnetOrigin()}${embed}` : url.toString(), embed });
     }, 503),
   },
-  // The viewer's requests and live connection, relayed to the computer for another device (Tailscale). Public like the
-  // computer itself: the viewer sends no cookies, and the computer checks the viewer's ticket on every request.
+  // Public: the viewer sends no cookies, and the computer checks its ticket on every request.
   "/sbproxy/*": async (req: Request, srv: Bun.Server<undefined>) => {
     if (!viewerOrigin) return err(new Error("open the viewer first"), 409);
     const u = new URL(req.url);
@@ -133,7 +123,7 @@ export const computerRoutes = {
     for (const k of ["content-encoding", "content-length"]) h.delete(k);
     return new Response(up.body, { status: up.status, headers: h });
   },
-  // Static files of cua's viewer, minus its frame-ancestors/COOP headers. Only GETs under /viewer/.
+  // Viewer files without frame-ancestors/COOP headers so the app can frame it. Only GETs under /viewer/.
   "/sbviewer/*": async (req: Request) => {
     if (!viewerOrigin) return err(new Error("open the viewer first"), 409);
     const rel = new URL(req.url).pathname.slice("/sbviewer/".length);

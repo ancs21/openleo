@@ -1,5 +1,4 @@
-// Task card panel: slides in from the right over the board (no backdrop),
-// header with list picker / expand / close, tabs "General" and the agent, and "+" to choose the agent.
+// Card panel: slides in from the right over the board, with no backdrop.
 import { usePanels } from "../../stores/panels";
 import { agentsUrl } from "../../stores/app-store";
 import { useEffect, useState, type ReactNode } from "react";
@@ -41,7 +40,6 @@ export function CardPanel({ card, agents, onClose, offset = 0 }: { card: TaskCar
       style={{ right: 12 + offset, width: wide ? `calc(100% - ${24 + offset}px)` : `min(${width}px, calc(100% - ${24 + offset}px))` }}
       className="absolute top-14 bottom-3 z-30 flex flex-col overflow-hidden rounded-[14px] bg-surface shadow-overlay animate-slide-in-right">
       {!wide && <PanelResizer panel="card" offset={offset} />}
-      {/* header */}
       <div className="shrink-0 px-5 pt-4">
         <div className="flex items-center gap-1">
           <span className="text-[13px] text-ink-3 tabular-nums">#{card.num}</span>
@@ -69,7 +67,6 @@ export function CardPanel({ card, agents, onClose, offset = 0 }: { card: TaskCar
         </div>
       </div>
 
-      {/* body */}
       <div className={`min-h-0 flex-1 px-5 ${tab === "general" ? "overflow-y-auto pb-5" : "flex flex-col pb-3"}`}>
         {tab === "general" ? <GeneralTab card={card} onClose={onClose} onRun={() => setTab(card.agent ?? "general")} /> : <AgentTab card={card} agent={tab} />}
       </div>
@@ -77,7 +74,6 @@ export function CardPanel({ card, agents, onClose, offset = 0 }: { card: TaskCar
   );
 }
 
-/** "+" next to the tabs: choose which agent works on this task. */
 function AgentChooser({ agents, current, onPick }: { agents: AgentDef[]; current?: string; onPick: (name: string) => void }) {
   const [open, setOpen] = useState(false);
   const boardId = useBoard((s) => s.boardId);
@@ -105,7 +101,6 @@ function Title({ card }: { card: TaskCard }) {
   );
 }
 
-/** "Todo ⌄": shows the card's list and moves it to another. */
 function ListPicker({ cardId }: { cardId: string }) {
   const lists = useBoard((s) => s.board?.lists ?? []);
   const moveCard = useBoard((s) => s.moveCard);
