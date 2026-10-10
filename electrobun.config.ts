@@ -9,7 +9,7 @@ export default {
   app: {
     name: "OpenLeo",
     identifier: "si.openleo.app",
-    version: "0.10.10",
+    version: "0.10.11",
   },
   // Updates: the app checks the latest GitHub release for this platform's update.json (made by each build).
   release: { baseUrl: "https://github.com/ancs21/openleo/releases/latest/download", generatePatch: false },
