@@ -18,7 +18,7 @@ bun test server/app/boards.test.ts  # one file
 bun test -t "welcome"               # tests whose name matches
 bunx tsc --noEmit                   # typecheck (there is no linter)
 bun run app:dev / app:build         # desktop app for this OS; output in artifacts/ (CI: .github/workflows/desktop.yml)
-# Versions are dates, 0.<month>.<day> (9 Oct: 0.10.9, in electrobun.config.ts); pushing tag v0.10.9 builds the release
+bun run release [version]           # notes in landing/changelog.json `next` -> a version (default 0.<month>.<day>) in it and electrobun.config.ts; merged to main, CI tags and releases it
 bun run landing / landing:build     # landing site (Astro, landing/) -> landing/dist
 bun run computer:build:apple        # the openleo-computer image for Apple's container runtime
 ```
