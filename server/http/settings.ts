@@ -25,7 +25,9 @@ export const settingsRoutes = {
   "/api/favicon/:host": async (req: Bun.BunRequest<"/api/favicon/:host">) => {
     const icon = await favicon(req.params.host.toLowerCase());
     return icon
-      ? new Response(icon.bytes as Uint8Array<ArrayBuffer>, { headers: { "content-type": icon.type, "cache-control": "public, max-age=604800", "x-content-type-options": "nosniff" } })
+      ? new Response(icon.bytes as Uint8Array<ArrayBuffer>, { headers: { "content-type": icon.type, "cache-control": "public, max-age=604800", "x-content-type-options": "nosniff",
+          // A site's SVG could carry script: opened on its own, it runs nothing.
+          "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox" } })
       : new Response(null, { status: 404, headers: { "cache-control": "public, max-age=86400" } });
   },
   // The open skills directory (skills.sh): search it, and look inside a skill before adding it.

@@ -86,7 +86,8 @@ export function ChatPanel({ agent, url, onNew, compact = false, emptyText, board
     if (el) pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
   };
   useEffect(() => {
-    if (messages.length > count.current) pinned.current = true; // a new message: jump to it
+    // Your own new message jumps to the bottom; the agent's steps only follow while you're there.
+    if (messages.length > count.current && messages.at(-1)?.role === "user") pinned.current = true;
     count.current = messages.length;
     const el = scroller.current;
     if (el && pinned.current) el.scrollTop = el.scrollHeight;

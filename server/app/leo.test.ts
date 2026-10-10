@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createBoard, getBoard, putBoard, StaleBoard } from "./boards";
-import { leoTools } from "./leo";
+import { boardNow, cardTools, leoTools } from "./leo";
 import { inTenant } from "../infra/tenant";
 
 test("Leo manages the board; a save from an older copy of it is refused", async () => {
@@ -28,10 +28,26 @@ test("Leo manages the board; a save from an older copy of it is refused", async 
     expect(await call("update_agent", { agent: "researcher", instructions: "Track BTC and ETH." })).toBe("Updated agent researcher: its instructions.");
     expect(updated).toEqual([{ name: "researcher", instructions: "Track BTC and ETH." }]);
     await expect(call("update_agent", { agent: "researcher" })).rejects.toThrow(/nothing to change/);
-    expect(await call("read_board", {})).toContain("#1 Compare prices again [todo] {Budget=500}");
+    expect(tools.read_board).toBeUndefined(); // Leo sees the board in its context instead
+    expect(boardNow(bid, [])).toContain("#1 Compare prices again [todo] {Budget=500}");
 
     // The app still holds the board from before Leo's changes: its save is refused, not applied.
     expect(() => putBoard(bid, { rev: seen, nextNum: 1, cards: {}, lists: [{ id: "T", title: "Todo", cards: [] }] })).toThrow(StaleBoard);
     expect(getBoard(bid).lists.map((l) => l.title)).toEqual(["Todo", "Research"]);
+  });
+});
+
+test("an agent adds and changes cards, but doesn't start the list's agent", async () => {
+  await inTenant("leo-test", async () => {
+    const bid = createBoard("Agent").id;
+    putBoard(bid, { nextNum: 1, cards: {}, lists: [{ id: "L", title: "Leads", agent: "researcher", cards: [] }] });
+    const tools = Object.fromEntries(cardTools(bid, () => []).map((t) => [t.name, t]));
+    const call = async (name: string, args: object) => ((await tools[name]!.execute("id", args as any)) as any).content[0].text as string;
+    expect(Object.keys(tools)).toEqual(["read_board", "read_card", "add_cards", "update_card"]);
+    expect(await call("add_cards", { list: "Leads", cards: [{ title: "Ada", fields: { LinkedIn: "https://linkedin.com/in/ada" } }] }))
+      .toContain("researcher doesn't start on cards an agent adds");
+    expect(await call("update_card", { card: 1, title: "Ada L." })).toBe("Updated #1");
+    expect(await call("read_board", {})).toContain("#1 Ada L. [todo]");
+    expect(await call("read_card", { card: 1 })).toBe("#1 Ada L. [todo] in Leads\n\nFields:\n- LinkedIn: https://linkedin.com/in/ada");
   });
 });

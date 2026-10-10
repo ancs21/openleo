@@ -7,10 +7,11 @@ import { LEO } from "../app/leo";
 import { leoSettings, setLeoSettings } from "../infra/leo-settings";
 import { compactIfLong, compactNow, getSession, isBusy, liveAgent, retune, runningCount, skey, stopSession } from "../app/live-agents";
 import { agentSkills, syncIfRunning } from "../app/skills";
+import { chatRun } from "../app/tasks";
 import { searchSummary, toChatMessages } from "../core/history";
 import { loadConversation, saveConversation } from "../infra/conversations";
 import { checkRuns, checkStorage } from "../infra/limits";
-import { onWebSearch, resolveModel } from "../infra/runtime";
+import { lastText, onWebSearch, resolveModel } from "../infra/runtime";
 import { inBoard } from "../infra/sandbox";
 import { SANDBOXED } from "../infra/config";
 import { CONVERSATION, err, onBoard, parseImages, safe } from "./guard";
@@ -47,14 +48,19 @@ function chat(name: string, session: string, message: string, images: ReturnType
         }
       });
       off = () => { offEvents(); offSearch(); };
+      const endRun = chatRun(session, name);
+      let failed: string | undefined;
       try {
         if (await compactIfLong(name, key, agent)) send({ type: "compacted" });
         await agent.prompt(message, images); // already inside the board (the route runs in it)
-        if (agent.state.errorMessage) send({ type: "error", message: agent.state.errorMessage });
+        failed = agent.state.errorMessage;
+        if (failed) send({ type: "error", message: failed });
       } catch (e) {
-        send({ type: "error", message: (e as Error).message });
+        failed = (e as Error).message;
+        send({ type: "error", message: failed });
       } finally {
         off();
+        endRun(failed, lastText(agent));
         void saveConversation(name, session, agent.state.messages);
         send({ type: "done" });
         if (!closed) ctrl.close();

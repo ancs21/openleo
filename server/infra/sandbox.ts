@@ -9,7 +9,7 @@
 //   OPENLEO_SANDBOX_IMAGE=...     e.g. ghcr.io/trycua/linux:24.04-slim-disk for a VM instead of a container,
 //                                 or ghcr.io/trycua/macos:26-slim for a macOS VM (runs on Lume, about 24 GB to download)
 import { AsyncLocalStorage } from "node:async_hooks";
-import { appleAddress, appleAvailable, appleComputer, stopAppleComputer } from "./apple-container";
+import { appleAddress, appleAvailable, appleComputer, restartAppleComputer, stopAppleComputer } from "./apple-container";
 import { MAIN_BOARD } from "../core/board";
 import { computerOf } from "./board-store";
 import { CLOUD_IMAGE, DOCKER_IMAGE, SANDBOX_ON_SETTING, SANDBOXED } from "./config";
@@ -94,16 +94,27 @@ export async function pauseComputer(board: string) {
   else await live?.sb.suspend().catch(() => {});
 }
 
+const restarts = new Map<string, Promise<void>>();
+
+/** Does the computer still answer at all? A failed call alone can't tell a hung computer from a slow app. */
+const answers = (sp: SpacesdClientLike) => withTimeout(sp.sh("true", 5_000), 10_000, "check").then(() => true, () => false);
+
 /**
- * Use the current board's computer. An Apple computer gets a new address when it restarts behind our back
- * (its service restarted, it crashed), so when a call fails and the address has moved, reconnect and try once more.
+ * Use the current board's computer. When a call to an Apple computer fails: if it restarted behind our back (new
+ * address), reconnect; if it stopped answering (hung), restart it. Either way, try once more.
  */
 async function withComputer<T>(fn: (c: Computer) => Promise<T>): Promise<T> {
-  const board = currentBoard(), key = keyOf(board);
+  const board = currentBoard(), key = keyOf(board), name = computerOf(board);
   const handle = sandbox(board), c = await handle;
   try { return await fn(c); }
   catch (e) {
-    if (!c.address || (await appleAddress(computerOf(board)).catch(() => c.address)) === c.address) throw e;
+    if (!c.address) throw e;
+    if ((await appleAddress(name).catch(() => c.address)) === c.address) {
+      if (await answers(c.sp)) throw e;
+      // One restart at a time per computer: the screen keeps asking while it's hung, so calls pile up here.
+      if (!restarts.has(key)) restarts.set(key, restartAppleComputer(name).finally(() => restarts.delete(key)));
+      await restarts.get(key);
+    }
     if (handles.get(key) === handle) handles.delete(key); // another call may already have reconnected
     return fn(await sandbox(board));
   }

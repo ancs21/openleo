@@ -9,7 +9,7 @@ import { lastText } from "../infra/runtime";
 import { inBoard } from "../infra/sandbox";
 import { inTenant, listTenants } from "../infra/tenant";
 import { loadDef } from "./agents";
-import { addCard, getBoard, listBoards, updateTask } from "./boards";
+import { addCard, boardOfCard, getBoard, listBoards, updateTask } from "./boards";
 import { compactIfLong, compacting, getSession, runningCount, skey, taskStops } from "./live-agents";
 import { TIDY_NOTES, TIDY_TITLE } from "./notes";
 
@@ -32,11 +32,12 @@ function recordRun(bid: string, cid: string, run: TaskRun) {
   updateTask(bid, cid, patch);
 }
 
-/** The card's fields and their values, for the agent to fill in as it works. */
+/** The fields set on the card, with their values (empty ones are left out). */
 function fieldsNote(board: { fields?: Field[] }, card: TaskCard) {
-  if (!board.fields?.length) return "";
-  const rows = board.fields.map((f) => `- ${f.name} (${f.type}${f.options?.length ? `: ${f.options.join(" / ")}` : ""}): ${card.values?.[f.id] ?? "empty"}`);
-  return `Card fields (fill in what you find with set_card_fields):\n${rows.join("\n")}`;
+  const set = (board.fields ?? []).filter((f) => card.values?.[f.id]);
+  if (!set.length) return "";
+  const rows = set.map((f) => `- ${f.name} (${f.type}${f.options?.length ? `: ${f.options.join(" / ")}` : ""}): ${card.values![f.id]}`);
+  return `Card fields (change them with set_card_fields):\n${rows.join("\n")}`;
 }
 
 /** Run a card's agent on it, inside the card's board. `how` says what started it (for the card's run history). */
@@ -78,6 +79,23 @@ function runTaskHere(bid: string, cid: string, agentName: string, how: TaskRun["
     () => (agent.state.errorMessage ? finish("error", agent.state.errorMessage) : finish("done", lastText(agent).slice(0, 20_000))),
     (e) => finish("error", (e as Error).message),
   );
+}
+
+/**
+ * A message in a task's chat ("task-<card id>") is a run too: the card shows it working, then its result.
+ * Returns how to note the end (nothing to do when the chat isn't a task's).
+ */
+export function chatRun(conversation: string, agentName: string) {
+  const cid = conversation.startsWith("task-") ? conversation.slice(5) : "";
+  const bid = cid ? boardOfCard(cid) : undefined;
+  if (!bid || getBoard(bid).cards[cid]?.kind !== "task") return () => {};
+  const started = Date.now();
+  updateTask(bid, cid, { status: "running", agent: agentName, result: undefined, ranAt: started });
+  return (error: string | undefined, text: string) => {
+    if (!getBoard(bid).cards[cid]) return;
+    updateTask(bid, cid, error ? { status: "error", result: error } : { status: "done", result: text.slice(0, 20_000) });
+    recordRun(bid, cid, { at: started, agent: agentName, how: "manual", status: error ? "error" : "done", ...(error ? { note: error.slice(0, 300) } : {}) });
+  };
 }
 
 /** Start a run that nobody is waiting on (a schedule, a new card): if it can't start, the card's history says why. */

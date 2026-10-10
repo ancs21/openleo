@@ -11,7 +11,7 @@ import { currentTenant } from "../infra/tenant";
 import { hasAgentFile } from "../infra/agent-store";
 import { createDef, listDefs, loadDef, updateDef } from "./agents";
 import { compact } from "./compact";
-import { LEO, leoTools } from "./leo";
+import { boardNow, cardTools, LEO, leoTools } from "./leo";
 import { boardContext, rememberTool } from "./notes";
 import { agentSkills, skillsPrompt, syncSkills, useSkillTool } from "./skills";
 import { runTask } from "./tasks";
@@ -29,12 +29,12 @@ function fromDef(name: string, conversation = ""): AgentFn {
     useModel(def.model);
     if (name === LEO) {
       const bid = currentBoard();
+      useWebSearch();
       for (const t of leoTools(bid, { run: (cid, agent) => runTask(bid, cid, agent), agents: () => inBoard(bid, listDefs), create: (a) => inBoard(bid, () => createDef(a)), update: (n, patch) => inBoard(bid, () => updateDef(n, patch)) })) useTool(t);
-      if (SANDBOXED) {
-        // Leo reads the board's notes only while its computer is on: chatting with Leo shouldn't start it.
-        useContext(async () => (computerState(currentBoard()).state === "running" ? boardContext() : ""));
-        useTool(rememberTool("Leo"));
-      }
+      // Leo reads the board's notes only while its computer is on: chatting with Leo shouldn't start it.
+      const notes = async () => (SANDBOXED && computerState(bid).state === "running" ? boardContext() : "");
+      useContext(async () => [boardNow(bid, inBoard(bid, listDefs)), await notes()].filter(Boolean).join("\n\n"));
+      if (SANDBOXED) useTool(rememberTool("Leo"));
       return def.instructions;
     }
     if (name === MEMORY_KEEPER) {
@@ -49,6 +49,8 @@ function fromDef(name: string, conversation = ""): AgentFn {
     for (const t of Object.values(tools)) useTool(t);
     for (const t of mcpToolsFor(def.mcp ?? [])) useTool(t);
     if (cardId) useTool(cardFieldsTool(cardId));
+    const bid = currentBoard();
+    for (const t of cardTools(bid, () => inBoard(bid, listDefs))) useTool(t);
     // The board's notes and memory, and this agent's skills, live in the board's computer (app/notes.ts, app/skills.ts).
     if (SANDBOXED) {
       const skills = agentSkills(def.skills); // also drops the old list of plain names

@@ -21,7 +21,7 @@ import { SoundToggle } from "../../components/SoundToggle";
 import { AgentIcon } from "../../components/AgentIcon";
 import { ScreenDialog } from "../sandbox/AgentScreen";
 
-const pill = "inline-flex h-8 items-center gap-1.5 rounded-full bg-surface/85 px-3 text-[13px] font-medium text-ink shadow-btn backdrop-blur-xl transition-colors duration-100 hover:bg-surface";
+const pill = "inline-flex h-8 shrink-0 items-center whitespace-nowrap gap-1.5 rounded-full bg-surface/85 px-3 text-[13px] font-medium text-ink shadow-btn backdrop-blur-xl transition-colors duration-100 hover:bg-surface";
 
 /** Switch boards, make a new one, rename or delete the current one. */
 function BoardSwitcher({ wallpaper }: { wallpaper: ReturnType<typeof useWallpaper> }) {
@@ -184,12 +184,12 @@ export function BoardTopBar({ query, onQuery, wallpaper, view, onView, onLeo }: 
           </button>
         ))}
       </div>
-      <div className="mx-auto flex h-8 w-full max-w-[460px] items-center gap-2 rounded-full bg-surface/85 px-3 text-ink-3 shadow-btn backdrop-blur-xl focus-within:bg-surface">
+      <div className="mx-auto flex h-8 w-full min-w-0 max-w-[460px] items-center gap-2 rounded-full bg-surface/85 px-3 text-ink-3 shadow-btn backdrop-blur-xl focus-within:bg-surface">
         <Icon>{glyphs.search}</Icon>
         <input ref={search} value={query} onChange={(e) => onQuery(e.target.value)} placeholder="Search" aria-label="Search cards"
           onKeyDown={(e) => { if (e.key === "Escape") { onQuery(""); e.currentTarget.blur(); } }}
           className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-3" />
-        <kbd className="font-sans text-[11px] text-ink-3">⌘K</kbd>
+        <kbd className="font-sans text-[11px] text-ink-3 max-sm:hidden">⌘K</kbd>
       </div>
       <button type="button" onClick={onLeo} title="Leo manages this board for you" className={`${pill} shrink-0`}>
         <Logo className="size-4" />Ask Leo

@@ -76,9 +76,9 @@ export const tools: Record<string, AgentTool<any>> = {
   }),
 };
 
-// Computer use: only the sandbox has a desktop (XFCE, 1280x800).
-if (SANDBOXED) tools.computer = defineTool({
-  name: "computer",
+// Computer use: only the sandbox has a desktop (XFCE, 1280x800). OpenAI reserves the tool name "computer".
+if (SANDBOXED) tools.desktop = defineTool({
+  name: "desktop",
   label: "Computer",
   description:
     (MACOS ? "Use the sandbox's macOS desktop. " : "Use the sandbox's Linux desktop (XFCE, 1280x800). ") + "Every action returns a fresh screenshot. " +

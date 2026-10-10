@@ -51,3 +51,12 @@ export async function appleComputer(name: string): Promise<{ sb: SandboxLike; ad
 
 /** Stop the computer; its files stay for next time. */
 export const stopAppleComputer = (name: string) => run("stop", name).then(() => {});
+
+/**
+ * Power-cycle a computer that stopped answering. A hung VM ignores `container stop` and `kill`, so its runtime
+ * process is ended instead (like pulling the plug: its files stay). The next attach starts it again.
+ */
+export async function restartAppleComputer(name: string) {
+  await Bun.$`pkill -f ${`container-runtime-linux start .* --uuid ${name}$`}`.quiet().nothrow();
+  for (let i = 0; i < 20 && addressOf(await inspect(name)); i++) await Bun.sleep(500);
+}

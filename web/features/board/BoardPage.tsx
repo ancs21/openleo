@@ -86,14 +86,22 @@ export function BoardPage() {
   const q = query.trim().toLowerCase();
   const matches = (c: Card) => !q || `#${c.num}` === q ||
     `${c.title} ${c.notes} ${c.result ?? ""}`.toLowerCase().includes(q);
-  // A plain wheel over the board background scrolls sideways (lists keep scrolling their own cards).
-  const wheelSideways = (e: React.WheelEvent<HTMLDivElement>) => {
+  // A plain wheel over the board background scrolls sideways (lists keep scrolling their own cards). A sideways swipe
+  // over a list scrolls the board: WebKit doesn't pass it on from a list that only scrolls up and down.
+  // Not React's onWheel: that listener is passive, and the swipe must not scroll twice where the browser does pass it on.
+  useEffect(() => {
     const el = scroller.current;
-    if (!el || e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-    const list = (e.target as HTMLElement).closest(".overflow-y-auto");
-    if (list && list.scrollHeight > list.clientHeight) return;
-    el.scrollLeft += e.deltaY;
-  };
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      const scrolls = (e.target as HTMLElement).closest(".overflow-y-auto");
+      const list = scrolls === el ? null : scrolls; // in the table view the board itself scrolls up and down
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        if (list) { e.preventDefault(); el.scrollLeft += e.deltaX; }
+      } else if (!e.shiftKey && !(list && list.scrollHeight > list.clientHeight)) el.scrollLeft += e.deltaY;
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
 
   // Lists, with a placeholder where a dragged list would land.
   const listOver = drag?.kind === "list" && drag.over?.type === "list" ? drag.over.index : -1;
@@ -105,7 +113,7 @@ export function BoardPage() {
     <div className="relative h-full overflow-hidden transition-[background] duration-500"
       style={{ background: wallpaperBackground(wallpaper) }}>
       <BoardTopBar query={query} onQuery={setQuery} wallpaper={wallpaper} view={view} onView={chooseView} onLeo={() => setLeo((o) => !o)} />
-      <div ref={scroller} onWheel={wheelSideways}
+      <div ref={scroller}
         className={`absolute inset-0 top-14 flex items-start gap-3 px-3 pb-3 ${view === "table" ? "overflow-y-auto" : "overflow-x-auto"}`}
         style={sideSpace ? { paddingRight: `min(${sideSpace + 12}px, 100% - 24px)` } : undefined}>
         {!board && <div className="m-auto text-[13px] text-white/80">{error ?? "Loading board…"}</div>}

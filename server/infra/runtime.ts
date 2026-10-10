@@ -6,8 +6,8 @@
 //     useSubagent("writer", "Writes the final report", Writer);
 //     return "You research topics thoroughly.";
 //   }
-import { Agent, type AgentTool } from "@earendil-works/pi-agent-core";
-import { Type, type ThinkingLevel, type TSchema } from "@earendil-works/pi-ai";
+import { Agent, type AgentTool, type StreamFn } from "@earendil-works/pi-agent-core";
+import { createAssistantMessageEventStream, isRetryableAssistantError, Type, type ThinkingLevel, type TSchema } from "@earendil-works/pi-ai";
 import { builtinModels } from "@earendil-works/pi-ai/providers/all";
 import { tenantCredentials } from "./credentials";
 import { currentTenant } from "./tenant";
@@ -92,6 +92,36 @@ export function resolveModel(id: string) {
   return model;
 }
 
+const RETRIES = 2;
+const EMPTY_USAGE = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } };
+/**
+ * A request the provider drops or turns away for a moment (a cut-off stream, overload) is sent again, as long as
+ * no answer or tool call has shown yet. Usage limits and bad requests aren't retried.
+ */
+export function withRetry(streamFn: StreamFn, wait: (ms: number) => Promise<void> = Bun.sleep): StreamFn {
+  return (model, context, options) => {
+    const out = createAssistantMessageEventStream();
+    void (async () => {
+      for (let attempt = 0; ; attempt++) {
+        let shown = false, retry = false;
+        try {
+          for await (const e of await streamFn(model, context, options)) {
+            if (e.type === "error" && !shown && attempt < RETRIES && !options?.signal?.aborted
+              && isRetryableAssistantError({ ...e.error, stopReason: "error" })) { retry = true; break; }
+            if (e.type === "start" && attempt > 0) continue; // the agent already has this reply's message
+            if (e.type !== "start" && !e.type.startsWith("thinking")) shown = true;
+            out.push(e);
+          }
+        } catch (err) { if (shown || attempt >= RETRIES) throw err; retry = true; }
+        if (!retry) return;
+        await wait(1000 * 3 ** attempt);
+      }
+    })().catch((err) => out.push({ type: "error", reason: "error", error: { role: "assistant", content: [], api: model.api, provider: model.provider, model: model.id, usage: EMPTY_USAGE, stopReason: "error", errorMessage: (err as Error).message, timestamp: Date.now() } }))
+      .finally(() => out.end());
+    return out;
+  };
+}
+
 export function createAgent(fn: AgentFn, depth = 0) {
   const spec = compile(fn, depth);
   const registry = models(); // this tenant's models and credentials
@@ -112,7 +142,7 @@ export function createAgent(fn: AgentFn, depth = 0) {
       thinkingLevel: spec.effort ?? "medium", // pi's own default is "off", which turns reasoning off entirely
       tools: spec.tools,
     },
-    streamFn: spec.webSearch
+    streamFn: withRetry(spec.webSearch
       ? (model, context, options) => registry.streamSimple(model, context, {
           ...options,
           // Checked per request, so switching the agent to another provider mid-chat is safe.
@@ -126,7 +156,7 @@ export function createAgent(fn: AgentFn, depth = 0) {
           },
           onProviderStreamEvent: async (e, m) => { await options?.onProviderStreamEvent?.(e, m); watch(e); },
         })
-      : registry.streamSimple.bind(registry),
+      : registry.streamSimple.bind(registry)),
     transformContext: async (messages) => withContext(keepRecentImages(messages, 3), await spec.context?.()),
   });
   if (spec.webSearch) {

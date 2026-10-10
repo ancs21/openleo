@@ -13,7 +13,7 @@ export function SiteAvatar({ url, size = "size-3.5", round = "rounded-[4px]", ri
   const host = hostOf(url);
   const [failed, setFailed] = useState(false);
   if (!failed) return (
-    <img src={`/api/favicon/${encodeURIComponent(host)}`} alt="" aria-hidden="true" loading="lazy" onError={() => setFailed(true)}
+    <img src={`/api/favicon/${encodeURIComponent(host)}?v=2`} alt="" aria-hidden="true" loading="lazy" onError={() => setFailed(true)}
       className={`shrink-0 bg-surface object-contain ${size} ${round} ${ring ? "shadow-[0_0_0_1.5px_var(--canvas)]" : ""}`} />
   );
   return (

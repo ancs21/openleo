@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { compile, keepRecentImages, useModel, useSubagent, useTool, withContext } from "./runtime";
+import { compile, keepRecentImages, useModel, useSubagent, useTool, withContext, withRetry } from "./runtime";
+import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
 import { inWorkspace, tools } from "../app/tools";
 import { inTenant } from "./tenant";
 
@@ -41,4 +42,25 @@ test("board context joins the system prompt sent to the model, not the saved cha
   expect(sent[0]).toEqual({ role: "system", content: "You write.\n\n## This board's notes\nShort." });
   expect(saved[0]!.content).toBe("You write."); // the chat on disk is untouched
   expect(withContext(saved, "")).toBe(saved);
+});
+
+test("a dropped request is sent again before anything shows; a usage limit isn't", async () => {
+  const msg = (errorMessage?: string) => ({ role: "assistant", content: [], stopReason: errorMessage ? "error" : "stop", errorMessage }) as any;
+  const reply = (errorMessage?: string) => {
+    const s = createAssistantMessageEventStream();
+    s.push({ type: "start", partial: msg() });
+    s.push(errorMessage ? { type: "error", reason: "error", error: msg(errorMessage) } : { type: "done", reason: "stop", message: msg() });
+    s.end();
+    return s;
+  };
+  const run = async (errors: (string | undefined)[]) => {
+    let calls = 0;
+    const out = await withRetry(() => reply(errors[calls++]), async () => {})({} as any, {} as any);
+    const events = [];
+    for await (const e of out) events.push(e.type);
+    return { calls, events };
+  };
+  expect(await run(["OpenAI Responses stream ended before a terminal response event", undefined])).toEqual({ calls: 2, events: ["start", "done"] });
+  expect(await run(["subscription_sharing_usage_limit_exceeded"])).toEqual({ calls: 1, events: ["start", "error"] });
+  expect((await run(Array(5).fill("503 overloaded"))).calls).toBe(3);
 });
