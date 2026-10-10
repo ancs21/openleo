@@ -1,0 +1,37 @@
+{
+  "next": [],
+  "releases": [
+    {
+      "version": "0.10.11",
+      "date": "2026-10-10",
+      "notes": [
+        "<b>Ask Leo</b> answers your questions itself: it sees the board, reads a card in full and searches the web. It only adds cards or starts an agent when you ask.",
+        "Agents can read the board and add or change cards, for example one card per thing they find.",
+        "Chatting with an agent on a card updates the card: it shows the agent working, then the result.",
+        "When a request drops before any answer shows, OpenLeo sends it again.",
+        "A computer that stops responding restarts on its own, so the agent's screen no longer stays on \"Connecting\".",
+        "Site icons look right for more sites.",
+        "In the Mac app, a sideways swipe over a list scrolls the board, and ⌘R reloads.",
+        "The chat stays where you are while an agent works, and only jumps down when you send a message."
+      ]
+    },
+    {
+      "version": "0.10.10",
+      "date": "2026-10-09",
+      "notes": [
+        "The first release built from the public repository. The app itself is the same as 0.10.9."
+      ]
+    },
+    {
+      "version": "0.10.9",
+      "date": "2026-10-09",
+      "notes": [
+        "The first desktop release, for Mac (Apple silicon), Windows and Linux.",
+        "Setup walks you through giving your agents a computer, with Apple's container tool on new Macs or Docker everywhere else. It downloads the computer ready-made for your chip, and on Windows it can switch Docker to the Linux containers it needs.",
+        "OpenLeo updates itself. It looks for a new version when it opens and every few hours, gets it ready in the background, then offers a restart. You can also choose <b>Check for Updates…</b> in the OpenLeo menu or the menu bar icon.",
+        "The Mac app is signed and checked by Apple, so it opens without the \"unidentified developer\" warning.",
+        "<b>Open on your other devices</b>: use OpenLeo from your phone or laptop, wherever you are, through Tailscale. Turn it on from your account menu and scan the code. See the <a href=\"./blog/tailscale\">guide</a>."
+      ]
+    }
+  ]
+}

@@ -43,6 +43,7 @@
     "app:icons": "bun scripts/build-icons.ts",
     "landing": "cd landing && bun --bun astro dev --port 3100",
     "landing:build": "cd landing && bun --bun astro build",
+    "release": "bun scripts/release.ts",
     "computer:build": "docker build --pull -t openleo-computer computer",
     "computer:build:apple": "container builder start --dns 1.1.1.1; container build --pull -t openleo-computer computer"
   },
