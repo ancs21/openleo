@@ -6,7 +6,6 @@ import { useWallpaper, wallpaperBackground } from "../../lib/useWallpaper";
 import { WallpaperCredit } from "../../components/WallpaperCredit";
 import { ChatGPTButton } from "./ChatGPTButton";
 
-/** Start screen: a frosted panel over this browser's board wallpaper; sign in with ChatGPT, then continue. */
 export function LoginPage() {
   const [params] = useSearchParams();
   const next = params.get("next") ?? "/";
@@ -15,11 +14,9 @@ export function LoginPage() {
   const wallpaper = useWallpaper();
 
   useEffect(() => {
-    // Sign-in returns to OpenLeo's public address, and cookies are per host: sign in there so the session
-    // lands where you'll use it (e.g. localhost -> 127.0.0.1 locally).
+    // Sign-in returns to OpenLeo's public address and cookies are per host, so sign in there.
     api<{ origin: string; origins?: string[] }>("/api/auth/config").then(({ origin, origins = [origin] }) => {
       if (!origins.includes(location.origin)) return location.replace(origin + location.pathname + location.search);
-      // Already signed in: go straight in.
       api<{ email?: string }>("/api/me").then(() => location.replace(next), () => {});
     }, () => {});
   }, [next]);

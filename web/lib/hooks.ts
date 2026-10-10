@@ -1,4 +1,3 @@
-// Small DOM hooks shared across features.
 import { useEffect, useRef, type RefObject } from "react";
 
 /** Call `handler` with the latest closure without re-subscribing every render. */
@@ -8,10 +7,7 @@ export function useLatest<T>(value: T) {
   return ref;
 }
 
-/**
- * Esc anywhere (skipped while typing in a field when `ignoreFields`).
- * `exclusive` handles it first and stops it, so an open menu closes without also closing the panel under it.
- */
+/** `exclusive` handles Esc first and stops it, so an open menu closes without also closing the panel under it. */
 export function useEscape(handler: () => void, { enabled = true, ignoreFields = false, exclusive = false } = {}) {
   const fn = useLatest(handler);
   useEffect(() => {
@@ -27,7 +23,6 @@ export function useEscape(handler: () => void, { enabled = true, ignoreFields = 
   }, [enabled, ignoreFields, exclusive, fn]);
 }
 
-/** ⌘/Ctrl + key. */
 export function useHotkey(key: string, handler: () => void) {
   const fn = useLatest(handler);
   useEffect(() => {
@@ -39,7 +34,6 @@ export function useHotkey(key: string, handler: () => void) {
   }, [key, fn]);
 }
 
-/** Pointer-down outside `ref` (e.g. to close a menu). */
 export function useClickOutside(ref: RefObject<Element | null>, handler: () => void, enabled = true) {
   const fn = useLatest(handler);
   useEffect(() => {

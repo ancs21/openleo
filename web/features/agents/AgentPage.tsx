@@ -8,7 +8,6 @@ import { AgentBuilder } from "./AgentBuilder";
 
 const EMPTY: AgentDef = { name: "", description: "", model: "", instructions: "", subagents: [] };
 
-/** /b/:boardId/agents/new · …/:name (its setup) · …/:name/c/:conversationId (a chat with it), in the agents panel. */
 export function AgentPage() {
   const { name, conversationId, boardId = "" } = useParams();
   const base = `/b/${boardId}/agents`;
@@ -31,8 +30,7 @@ export function AgentPage() {
     shownSaved.current = saved;
     setNotice(undefined);
   }, [name, loaded, key]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Changed elsewhere (Leo, the chat's model picker): show the new version, unless you've edited the form since;
-  // then only the model follows, and your edits stay until you save or leave.
+  // Changed elsewhere: show the new version unless you've edited the form; then only the model follows.
   const savedText = saved && JSON.stringify(saved);
   useEffect(() => {
     const was = shownSaved.current;
@@ -81,7 +79,6 @@ export function AgentPage() {
   );
 }
 
-/** What Save did with the agent's skills: installed in the board computers that are on, or not yet. */
 function savedNotice(result?: { installed: boolean; failed: string[] }) {
   if (!result) return "Saved";
   if (result.failed.length) return `Saved, but couldn't install ${result.failed.join(", ")}: it changed since you checked it, or skills.sh can't be reached.`;

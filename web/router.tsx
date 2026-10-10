@@ -20,7 +20,7 @@ export const router = createBrowserRouter([
         children: [
           { path: "card/:num" },
           {
-            path: "agents", // agents belong to a board: they're managed in a panel on it
+            path: "agents",
             element: <AgentsPanel />,
             children: [
               { index: true, element: <AgentList /> },
@@ -31,7 +31,7 @@ export const router = createBrowserRouter([
           },
         ],
       },
-      { path: "/card/:num", element: <LegacyCardLink /> }, // links from before there were several boards
+      { path: "/card/:num", element: <LegacyCardLink /> }, // old links from before there were several boards
       { path: "/agents/*", element: <LegacyAgentsLink /> }, // links from before agents belonged to a board
       { path: "*", element: <Navigate to="/" replace /> },
     ],

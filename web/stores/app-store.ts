@@ -1,5 +1,4 @@
-// App-wide state (Zustand): agents, model catalog, tools, sandbox, ChatGPT sign-in, global dialogs.
-// Components select only what they use; server data is loaded via the actions below.
+// App-wide state: the board's agents, model catalog, tools, sandbox, ChatGPT sign-in, global dialogs.
 import { create } from "zustand";
 import type { AgentDef, ChatGPTStatus, McpServerInfo, SandboxInfo, Tuning } from "../../shared/types";
 import { api, json } from "../lib/api";
@@ -7,7 +6,6 @@ import { openInNewTab } from "../lib/open-tab";
 import { storage } from "../lib/storage";
 
 type AppState = {
-  /** the open board's agents (agents belong to a board) */
   agents: AgentDef[];
   agentsLoaded: boolean;
   agentsBoard: string;
@@ -17,26 +15,24 @@ type AppState = {
   chatgpt: ChatGPTStatus;
   notice?: string;
   welcomeOpen: boolean;
-  /** the computer setup dialog; `setupNeeded`: this Mac has no working computer yet and its owner can set one up */
+  /** `setupNeeded`: this Mac has no working computer yet and its owner can set one up */
   setupOpen: boolean;
   setupNeeded: boolean;
   limitOpen: boolean;
 
   init: () => Promise<void>;
-  /** Load a board's agents (by default, the board they were last loaded for). */
+  /** Defaults to the board they were last loaded for. */
   loadAgents: (board?: string) => Promise<void>;
   loadModels: () => Promise<void>;
   loadChatGPT: () => Promise<ChatGPTStatus>;
-  /** Save an agent on its board; its skills are installed right away if the board's computer is on. */
+  /** Skills are installed right away if the board's computer is on. */
   saveAgent: (def: AgentDef, previousName?: string) => Promise<{ installed: boolean; failed: string[] } | undefined>;
   deleteAgent: (name: string) => Promise<void>;
-  /** the chat's picker: another model or thinking time (the agent keeps its conversations) */
   tuneAgent: (name: string, patch: Tuning) => Promise<void>;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
-  /** a board's computer, in a new tab */
   openViewer: (board?: string) => Promise<void>;
-  /** connects right away; resolves with the server's tools or its connection error */
+  /** Connects right away; resolves with the server's tools or its connection error. */
   saveMcp: (name: string, cfg: { url?: string; headers?: Record<string, string>; command?: string }) => Promise<McpServerInfo>;
   deleteMcp: (name: string) => Promise<void>;
   setNotice: (notice?: string) => void;
@@ -45,7 +41,6 @@ type AppState = {
   setLimitOpen: (open: boolean) => void;
 };
 
-/** Where a board's agents live in the API. */
 export const agentsUrl = (board: string) => `/api/boards/${board}/agents`;
 
 export const useApp = create<AppState>((set, get) => ({
@@ -63,7 +58,7 @@ export const useApp = create<AppState>((set, get) => ({
   init: async () => {
     const { loadModels, loadChatGPT } = get();
     await Promise.all([
-      loadModels(), loadChatGPT(), // agents load with their board (features/board/store.ts)
+      loadModels(), loadChatGPT(),
       api<SandboxInfo>("/api/sandbox").then((sandbox) => set({ sandbox })),
       api<McpServerInfo[]>("/api/mcp").then((mcp) => set({ mcp })),
     ]).catch((e) => set({ notice: (e as Error).message }));
@@ -81,7 +76,7 @@ export const useApp = create<AppState>((set, get) => ({
     const status = await api<ChatGPTStatus>("/api/auth/chatgpt");
     const was = get().chatgpt.signedIn;
     if (status.signedIn && !was) {
-      void get().loadModels(); // plan models become available
+      void get().loadModels();
       if (!storage.get("gpt-welcomed")) { storage.set("gpt-welcomed", "1"); set({ welcomeOpen: true }); }
     }
     set({ chatgpt: status });
@@ -91,7 +86,7 @@ export const useApp = create<AppState>((set, get) => ({
   saveAgent: async (def, previousName) => {
     const base = agentsUrl(get().agentsBoard);
     await api(`${base}/${def.name}`, json(def, "PUT"));
-    if (previousName && previousName !== def.name) await api(`${base}/${previousName}`, { method: "DELETE" }); // rename
+    if (previousName && previousName !== def.name) await api(`${base}/${previousName}`, { method: "DELETE" });
     await get().loadAgents();
     if (def.skills?.length) return api<{ installed: boolean; failed: string[] }>(`${base}/${def.name}/skills`, { method: "POST" });
   },
@@ -127,7 +122,6 @@ export const useApp = create<AppState>((set, get) => ({
 
   signOut: async () => {
     const r = await api<ChatGPTStatus>("/api/auth/chatgpt/logout", { method: "POST" });
-    // The session ended with it: back to the login page (with a note if ChatGPT didn't confirm the revocation).
     location.assign(r.revoked ? "/login" : `/login?error=${encodeURIComponent("Signed out here, but ChatGPT didn't confirm it. Disconnect OpenLeo in ChatGPT settings to be sure.")}`);
   },
 

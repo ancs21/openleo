@@ -1,15 +1,13 @@
-// A board's custom fields: typed values on every card that people and agents both fill in.
-// Values are stored as strings; each field's type decides how a value is checked and shown.
+// A board's custom fields. Values are stored as strings; the field's type decides how they are checked and shown.
 
 export const FIELD_TYPES = ["text", "number", "date", "link", "select"] as const;
 export type FieldType = (typeof FIELD_TYPES)[number];
-export type Field = { id: string; name: string; type: FieldType; /** a select's choices */ options?: string[] };
+export type Field = { id: string; name: string; type: FieldType; options?: string[] };
 
 export const MAX_FIELDS = 20;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const URL_LIKE = /^(https?:\/\/\S+|([\w-]+\.)+[a-z]{2,}(\/\S*)?)$/i; // a full URL, or a bare domain with an optional path
 
-/** The type a new field gets from its first value. */
 export function inferType(value: string): FieldType {
   const v = value.trim();
   if (DATE.test(v)) return "date";
@@ -26,7 +24,7 @@ function toNumber(v: string) {
   return Number.isFinite(n) ? n : undefined;
 }
 
-/** A value for `field`, normalized; "" when it clears the field; undefined when it doesn't fit the type. */
+/** "" clears the field; undefined means the value doesn't fit the type. */
 export function cleanValue(field: Field, raw: unknown): string | undefined {
   if (typeof raw !== "string" && typeof raw !== "number") return undefined;
   const v = String(raw).trim().slice(0, 500);
@@ -40,7 +38,6 @@ export function cleanValue(field: Field, raw: unknown): string | undefined {
   }
 }
 
-/** A board's fields from untrusted input. */
 export function parseFields(v: unknown): Field[] {
   if (!Array.isArray(v)) return [];
   const seen = new Set<string>();
@@ -56,7 +53,7 @@ export function parseFields(v: unknown): Field[] {
   });
 }
 
-/** A card's values from untrusted input: only the board's fields, each value fitting its type. */
+/** Keeps only the board's fields, each value fitting its type. */
 export function parseValues(v: unknown, fields: Field[]): Record<string, string> | undefined {
   if (!v || typeof v !== "object") return undefined;
   const out: Record<string, string> = {};
@@ -67,7 +64,6 @@ export function parseValues(v: unknown, fields: Field[]): Record<string, string>
   return Object.keys(out).length ? out : undefined;
 }
 
-/** A short id for a new field named `name`, unique among `fields`. */
 export function fieldId(name: string, fields: Field[]) {
   const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || "field";
   let id = base;

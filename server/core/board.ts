@@ -1,6 +1,5 @@
-// Board rules: what a board, its lists and its cards may hold, as plain functions on a Board.
-// Cards are tasks: prompts an agent runs (the card picks the agent). The server owns task status and results.
-// Storage is elsewhere (infra/board-store.ts); the use cases that load, change and save a board are in app/boards.ts.
+// Board rules as plain functions on a Board. Cards are tasks an agent runs; the server owns task status and results.
+// Storage is in infra/board-store.ts; the load/change/save use cases are in app/boards.ts.
 import type { Board, Card, List } from "../../shared/types";
 import { nextRun, parseSchedule } from "../../shared/schedule";
 import { ICONS } from "../../shared/icons";
@@ -18,10 +17,8 @@ const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max
 /** The app saved a copy of the board older than the one the server has. */
 export class StaleBoard extends Error {}
 
-/** A board's title as people type it, made safe. */
 export const boardTitle = (title: string) => title.trim().slice(0, 60) || "Untitled board";
 
-/** A board id from its title: lowercase, dashes, at most 20 characters. */
 export const boardSlug = (title: string) => title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 20) || "board";
 
 export function freshBoard(title: string, computer: string): Board {
@@ -48,7 +45,7 @@ export function welcome(b: Board): Board {
   return b;
 }
 
-/** Boards used to mirror each agent as a card (and an "Agents" list): drop those, and the list once it's empty. */
+/** Old boards mirrored each agent as a card in an "Agents" list: drop those, and the list once it's empty. */
 export function dropAgentCards(b: Board) {
   const agentCards = new Set(Object.values(b.cards).flatMap((c) => ((c as { kind: string }).kind === "agent" ? [c.id] : [])));
   if (!agentCards.size) return;
@@ -67,11 +64,7 @@ export function afterRestart(b: Board): Board {
 /** A change made on the server (Leo, a chat setup) bumps the revision, so an app holding an older copy reloads instead of overwriting it. */
 export const bumpRev = (board: Board) => { board.rev = (board.rev ?? 0) + 1; };
 
-/**
- * A card's schedule from the client, and when it next runs. The next run is server-owned: kept while the
- * schedule is unchanged, worked out afresh when it changes; a paused schedule has none (and starts its
- * count of failures over).
- */
+/** A card's schedule from the client. The next run is server-owned: kept while unchanged, recomputed on change, none when paused (which resets failures). */
 function scheduleOf(raw: any, prev: Card | undefined): Pick<Card, "schedule" | "nextRunAt" | "failStreak"> {
   const schedule = parseSchedule(raw.schedule);
   if (!schedule || !AGENT_NAME.test(schedule.agent)) return {};
@@ -80,10 +73,8 @@ function scheduleOf(raw: any, prev: Card | undefined): Pick<Card, "schedule" | "
   return { schedule, nextRunAt: same ? prev.nextRunAt : nextRun(schedule, Date.now()) };
 }
 
-/**
- * The board after the app's layout and text edits; server-owned task fields are kept. `elsewhere(cid)`: the card
- * belongs to another board (a card id belongs to one board). Custom fields and their values change through setFields/setCardValue.
- */
+/** The board after the app's layout and text edits, keeping server-owned task fields. `elsewhere(cid)`: the card is on another board.
+ * Custom fields and their values change only through setFields/setCardValue. */
 export function fromClient(board: Board, input: any, elsewhere: (cid: string) => boolean): Board {
   if (!input || !Array.isArray(input.lists) || typeof input.cards !== "object") throw new Error("bad board");
   if (typeof input.rev === "number" && input.rev !== (board.rev ?? 0)) throw new StaleBoard("the board changed meanwhile, reload it");
@@ -119,10 +110,7 @@ export function updateTask(board: Board, cid: string, patch: Partial<Card>) {
   return board.cards[cid];
 }
 
-/**
- * An agent fills in a card's fields by name. A name the board doesn't have yet becomes a new field, typed from
- * its value; a new choice for a select field is added to it. "" clears a value. Returns what was set or refused.
- */
+/** An agent sets card fields by name: unknown names become new fields typed from the value, new select choices are added, "" clears. */
 export function setCardFields(board: Board, cid: string, byName: Record<string, string>) {
   const card = task(board, cid);
   const fields = (board.fields ??= []);
@@ -157,7 +145,6 @@ export function setFields(board: Board, input: unknown) {
   }
 }
 
-/** Set one value on a card ("" clears it). */
 export function setCardValue(board: Board, cid: string, fieldIdIn: string, raw: unknown) {
   const card = board.cards[cid];
   const field = board.fields?.find((f) => f.id === fieldIdIn);
@@ -169,7 +156,6 @@ export function setCardValue(board: Board, cid: string, fieldIdIn: string, raw: 
   card.values = Object.keys(values).length ? values : undefined;
 }
 
-/** Add lists and fields to a board (skipping names it has already). Returns what was added. */
 export function addToBoard(board: Board, setup: { lists: string[]; fields: { name: string; type: FieldType; options?: string[] }[] }) {
   const has = (names: string[], n: string) => names.some((x) => x.toLowerCase() === n.trim().toLowerCase());
   const lists = setup.lists.map((t) => t.trim().slice(0, 80)).filter((t) => t && !has(board.lists.map((l) => l.title), t)).slice(0, 50 - board.lists.length);
@@ -185,7 +171,6 @@ export function addToBoard(board: Board, setup: { lists: string[]; fields: { nam
   return { lists, fields: added };
 }
 
-/** A list by its title (any case) or id. */
 export function findList(board: Board, nameOrId: string) {
   const n = nameOrId.trim().toLowerCase();
   const list = board.lists.find((l) => l.id === nameOrId || l.title.toLowerCase() === n);
@@ -193,7 +178,6 @@ export function findList(board: Board, nameOrId: string) {
   return list;
 }
 
-/** A task card by its number (#12). */
 export function findCard(board: Board, num: number) {
   const card = Object.values(board.cards).find((c) => c.num === num);
   if (!card) throw new Error(`no card #${num}`);

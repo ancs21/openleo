@@ -4,7 +4,7 @@ import { useEscape } from "../lib/hooks";
 import { Icon, glyphs } from "./Icon";
 import { IconButton } from "./IconButton";
 
-/** A large dialog over everything: title and close, a scrolling body, and an optional footer. Esc closes it (only it). */
+/** Esc closes only this dialog, not what's under it. */
 export function Dialog({ title, onClose, children, footer, className = "w-[min(880px,calc(100vw-32px))]" }: {
   title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; className?: string;
 }) {

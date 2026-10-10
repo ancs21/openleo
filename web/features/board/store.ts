@@ -1,6 +1,4 @@
-// Board state (Zustand): the open board, the list of boards, and the open board's computer.
-// Moves use the pure functions in model.ts. Layout and text edits apply optimistically and save (debounced) with PUT;
-// the server owns task status/results, so we poll while anything is running (and while the computer starts).
+// Edits apply optimistically and save debounced; the server owns task status, so we poll while anything runs.
 import { create } from "zustand";
 
 import type { Board, BoardInfo, Card, ComputerInfo, List, ListSource, TaskCard } from "../../../shared/types";
@@ -13,7 +11,6 @@ import { moveCard, moveList, type DropResult } from "./model";
 
 export type { Board, Card, List, TaskCard };
 
-/** Live drag state, so lists can render a placeholder where the drop will land. */
 export type DragState = { kind: "card" | "list"; id: string; height: number; width: number; over: DropResult | null };
 
 const newId = () => crypto.randomUUID().slice(0, 8);
@@ -40,7 +37,7 @@ type State = {
   error?: string;
   drag?: DragState;
   setDrag: (drag?: DragState) => void;
-  /** Switch to a board (saving any pending edit to the previous one first). */
+  /** Saves any pending edit to the previous board first. */
   open: (boardId: string) => Promise<void>;
   load: () => Promise<void>;
   loadBoards: () => Promise<void>;
@@ -69,9 +66,7 @@ type State = {
   automationList?: string;
   setAutomationList: (listId?: string) => void;
   deleteCard: (cardId: string) => void;
-  /** Agent-first setup: describe the board, and the lists and fields it needs are added. */
   setupBoard: (text: string) => Promise<{ lists: string[]; fields: string[] }>;
-  /** Replace the board's custom fields. */
   setFields: (fields: Field[]) => Promise<void>;
   /** Set one card's value for a field ("" clears it). */
   setValue: (cardId: string, fieldId: string, value: string) => Promise<void>;
@@ -112,7 +107,6 @@ export const useBoard = create<State>((set, get) => {
       set({ error: (e as Error).message });
     }
   };
-  /** Apply a local change now; persist it shortly after. */
   const edit = (fn: (b: Board) => Board) => {
     const b = get().board;
     if (!b) return;
@@ -179,7 +173,7 @@ export const useBoard = create<State>((set, get) => {
         const finished = Object.values(board.cards).filter((c) => before[c.id]?.status === "running" && c.status !== "running");
         if (finished.length) play(finished.some((c) => c.status === "error") ? "release" : "page");
         if (!saveTimer || !get().board) set({ board, error: undefined }); // don't clobber an unsaved local edit
-        pickMissingIcons(board); // lists made before icons
+        pickMissingIcons(board);
         schedulePoll();
       } catch (e) { set({ error: (e as Error).message }); }
     },

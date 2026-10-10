@@ -4,7 +4,6 @@ import { agentLabel } from "../../../shared/types";
 import { useApp } from "../../stores/app-store";
 import { AgentIcon } from "../../components/AgentIcon";
 
-/** The agents panel's first view: New agent, then this board's agents. */
 export function AgentList() {
   const agents = useApp((s) => s.agents);
   const { boardId } = useParams();

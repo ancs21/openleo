@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { EYES, pupilAt, RESTING } from "./logo-mark";
 
-/** The OpenLeo mark in theme colours. `follow`: the pupils follow the pointer around the page (login page). */
+/** `follow`: the pupils follow the pointer around the page. */
 export function Logo({ className = "size-6", follow = false }: { className?: string; follow?: boolean }) {
   const svg = useRef<SVGSVGElement>(null);
   const pupils = useRef<(SVGCircleElement | null)[]>([]);

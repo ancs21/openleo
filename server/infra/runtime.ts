@@ -1,11 +1,4 @@
-// Agent layer on pi: an agent is a function that calls hooks and returns its system prompt.
-//
-//   export function Researcher() {
-//     useModel("openai/gpt-6-luna");
-//     useTool(fetchUrl);
-//     useSubagent("writer", "Writes the final report", Writer);
-//     return "You research topics thoroughly.";
-//   }
+// An agent is a function that calls hooks (useModel, useTool, useSubagent...) and returns its system prompt.
 import { Agent, type AgentTool, type StreamFn } from "@earendil-works/pi-agent-core";
 import { createAssistantMessageEventStream, isRetryableAssistantError, Type, type ThinkingLevel, type TSchema } from "@earendil-works/pi-ai";
 import { builtinModels } from "@earendil-works/pi-ai/providers/all";
@@ -27,7 +20,6 @@ export function onWebSearch(agent: Agent, fn: (e: WebSearchEvent) => void) {
 }
 type Spec = { model?: string; effort?: ThinkingLevel | "off"; webSearch?: boolean; tools: AgentTool<any>[]; prompt: string; context?: () => Promise<string> };
 
-/** Each tenant gets its own model registry, built on its own credentials. */
 const registries = new Map<string, ReturnType<typeof builtinModels>>();
 export function models() {
   const tenant = currentTenant();
@@ -35,7 +27,7 @@ export function models() {
   if (!registry) registries.set(tenant, (registry = builtinModels({ credentials: tenantCredentials(tenant) })));
   return registry;
 }
-const MAX_DEPTH = 5; // fixed delegation depth; make configurable if deeper chains are needed
+const MAX_DEPTH = 5;
 
 let current: { spec: Spec; depth: number } | null = null;
 function ctx() {
@@ -43,7 +35,6 @@ function ctx() {
   return current;
 }
 
-// Typed tool definition; params are inferred from the TypeBox schema.
 export const defineTool = <T extends TSchema>(tool: AgentTool<T>) => tool as unknown as AgentTool<any>;
 
 export const useModel = (id: string) => void (ctx().spec.model = id);
@@ -52,11 +43,9 @@ export const useEffort = (level: ThinkingLevel | "off") => void (ctx().spec.effo
 export const useWebSearch = () => void (ctx().spec.webSearch = true);
 export const supportsWebSearch = (model: { api: string }) => model.api === "openai-responses";
 export const useTool = (tool: AgentTool<any>) => void ctx().spec.tools.push(tool);
-// Text read fresh before every model request and added to the system prompt, never saved in the chat
-// (it can change between runs, like the board's memory).
+// Read fresh before every request and added to the system prompt, never saved in the chat (it changes between runs).
 export const useContext = (fn: () => Promise<string>) => void (ctx().spec.context = fn);
 
-// Delegation: each call runs a fresh child agent and returns its final answer.
 export function useSubagent(name: string, description: string, fn: AgentFn) {
   const { spec, depth } = ctx();
   if (depth >= MAX_DEPTH) return;
@@ -94,10 +83,7 @@ export function resolveModel(id: string) {
 
 const RETRIES = 2;
 const EMPTY_USAGE = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } };
-/**
- * A request the provider drops or turns away for a moment (a cut-off stream, overload) is sent again, as long as
- * no answer or tool call has shown yet. Usage limits and bad requests aren't retried.
- */
+/** Retry transient failures (cut-off stream, overload) only before any output shows; limits and bad requests aren't retried. */
 export function withRetry(streamFn: StreamFn, wait: (ms: number) => Promise<void> = Bun.sleep): StreamFn {
   return (model, context, options) => {
     const out = createAssistantMessageEventStream();
@@ -124,7 +110,7 @@ export function withRetry(streamFn: StreamFn, wait: (ms: number) => Promise<void
 
 export function createAgent(fn: AgentFn, depth = 0) {
   const spec = compile(fn, depth);
-  const registry = models(); // this tenant's models and credentials
+  const registry = models();
   const listeners = new Set<(e: WebSearchEvent) => void>();
   let steps: { id: string; action?: WebSearchAction }[] = [];
   const watch = (e: any) => {

@@ -1,6 +1,5 @@
-// Assistant replies as markdown. react-markdown builds React elements and ignores raw HTML,
-// so model output can't inject markup. Fenced code renders as CodeBlock. Images may also be
-// inline data (an SVG a model drew): an image can't run code, so only image sources get that.
+// Assistant replies as markdown. react-markdown ignores raw HTML, so model output can't inject markup.
+// Only image sources may be inline data: an image can't run code.
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { computerPath, fileKind, fileUrl, inMacApp, readText, saveToDownloads } from "../lib/computer-files";
 import ReactMarkdown, { defaultUrlTransform, type Components } from "react-markdown";
@@ -13,7 +12,6 @@ const FileIcon = () => (
   </svg>
 );
 
-/** Header with language + copy, line-numbered body that wraps. */
 export function CodeBlock({ code, lang }: { code: string; lang?: string }) {
   const [copied, setCopied] = useState(false);
   const lines = code.replace(/\n$/, "").split("\n");
@@ -46,13 +44,11 @@ export function CodeBlock({ code, lang }: { code: string; lang?: string }) {
 
 const IMAGE_DATA = /^data:image\/(png|jpe?g|gif|webp|svg\+xml)[;,]/i;
 
-/** Links keep react-markdown's safe list; an image may also be inline image data, and either may be a file in the board's computer. */
+/** Links keep react-markdown's safe list; images may also be inline data, and either may be a file in the board's computer. */
 const urlTransform = (url: string, key: string) => (key === "src" && IMAGE_DATA.test(url)) || computerPath(url) ? url : defaultUrlTransform(url);
 
-/** The board whose computer holds the files a reply links to (set by the chat). */
 export const ComputerBoard = createContext<string | undefined>(undefined);
 
-/** A link to a file in the board's computer: opens it in a viewer inside the app. */
 function FileLink({ path, board, children }: { path: string; board: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
@@ -64,7 +60,6 @@ function FileLink({ path, board, children }: { path: string; board: string; chil
   );
 }
 
-/** A file from the board's computer in a dialog: a picture, a PDF, text, or a download when it's none of those. */
 function FileViewer({ path, board, onClose }: { path: string; board: string; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   const url = fileUrl(board, path), kind = fileKind(path), name = path.split("/").pop();
@@ -97,7 +92,7 @@ function FileViewer({ path, board, onClose }: { path: string; board: string; onC
   );
 }
 
-/** A raw <img> tag (models write them for pictures they make) as a markdown image; other HTML stays text. */
+/** Models write raw <img> tags for pictures they make: turn them into markdown images; other HTML stays text. */
 function htmlImages(text: string) {
   return text.replace(/<img\b[^>]*?\ssrc=(["'])(.*?)\1[^>]*?\/?>/gis, (tag, _q, src: string) => {
     if (!IMAGE_DATA.test(src) && !/^https?:\/\//i.test(src)) return tag;
@@ -110,7 +105,7 @@ function htmlImages(text: string) {
 const components: Components = {
   img: ({ src, alt }) => (typeof src === "string" && src ? <ReplyImage src={src} alt={alt ?? ""} /> : null),
   p: ({ children }) => <p className="my-0">{children}</p>,
-  // Short labels on web links ("AP News", "nobelprize.org") read as citations: render them as source chips.
+  // Short labels on web links read as citations: render them as source chips.
   a: ({ href, children }) => href && computerPath(href) ? <ComputerLink path={computerPath(href)!}>{children}</ComputerLink>
     : typeof children === "string" && /^https?:\/\//.test(href ?? "") && children.length <= 28
     ? <SourceChip href={href!} label={children.replace(/^www\./, "")} />
@@ -123,11 +118,10 @@ const components: Components = {
   h3: ({ children }) => <h4 className="mt-1 text-[14px] font-semibold">{children}</h4>,
   blockquote: ({ children }) => <blockquote className="border-l-2 border-line-strong pl-3 text-ink-2">{children}</blockquote>,
   hr: () => <hr className="border-line" />,
-  // Tables break only between words and keep each column readable; a wide one scrolls sideways.
   table: ({ children }) => <div className="overflow-x-auto rounded-card shadow-card [overflow-wrap:normal]"><table className="min-w-full border-collapse text-[12.5px]">{children}</table></div>,
   th: ({ children }) => <th className="border-b border-line bg-inset px-3 py-1.5 text-left align-bottom font-medium text-ink-2"><div className="min-w-28">{children}</div></th>,
   td: ({ children }) => <td className="border-b border-line-soft px-3 py-1.5 align-top"><div className="min-w-28">{children}</div></td>,
-  pre: ({ children }) => <>{children}</>, // the code component renders the whole block
+  pre: ({ children }) => <>{children}</>,
   code: ({ className, children }) => {
     const text = String(children ?? "");
     const lang = /language-([\w+-]+)/.exec(className ?? "")?.[1];
@@ -136,7 +130,7 @@ const components: Components = {
   },
 };
 
-/** A picture in a reply; one from the board's computer is read through the app and opens full size when clicked. */
+/** One from the board's computer is read through the app and opens full size when clicked. */
 function ReplyImage({ src, alt }: { src: string; alt: string }) {
   const board = useContext(ComputerBoard);
   const path = computerPath(src);
@@ -157,7 +151,7 @@ function ComputerLink({ path, children }: { path: string; children: ReactNode })
   return board ? <FileLink path={path} board={board}>{children}</FileLink> : <span title={path}>{children}</span>;
 }
 
-/** `tone` replaces the default size and colour (e.g. the smaller, muted thought trace). */
+/** `tone` replaces the default size and colour. */
 export function Markdown({ text, caret, tone = "text-[13.5px] leading-[1.6] text-ink" }: { text: string; caret?: ReactNode; tone?: string }) {
   return (
     <div className={`flex flex-col gap-2.5 [overflow-wrap:anywhere] ${tone}`}>

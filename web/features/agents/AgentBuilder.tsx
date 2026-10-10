@@ -13,7 +13,6 @@ import { StartingPoint } from "./StartingPoint";
 const EFFORT_HINTS: Partial<Record<Effort, string>> = { off: "no thinking", medium: "default" };
 
 
-/** Agent form in plain language: name, instructions, skills, apps, helpers, advanced. */
 export function AgentBuilder({ form, setForm, isNew, onSave, onDelete, onCancel, notice }: {
   form: AgentDef; setForm: (f: AgentDef) => void; isNew: boolean; onSave: () => void; onDelete: () => void; onCancel: () => void; notice?: string;
 }) {

@@ -5,14 +5,11 @@ import { MenuItem, Popover } from "./Popover";
 
 export type Option<T extends string> = { value: T; label: string; extra?: string; icon?: ReactNode };
 
-/** A field that picks one option from a dropdown menu (the app's menu style, not the browser's). */
+/** Uses the app's menu style, not the browser's. */
 export function Select<T extends string>({ value, options, onChange, label, className = "w-full", mono = false, bare = false, search = false, placeholder }: {
   value: T; options: Option<T>[]; onChange: (value: T) => void; label: string; className?: string; mono?: boolean;
-  /** no field box: for a table cell */
   bare?: boolean;
-  /** a filter box at the top of the menu, for long lists */
   search?: boolean;
-  /** shown while nothing is chosen */
   placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);

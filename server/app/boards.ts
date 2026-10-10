@@ -1,5 +1,4 @@
-// Board use cases: each loads a board, applies a rule from core/board.ts and saves it (infra/board-store.ts).
-// Changes made on the server (Leo, a chat setup) bump the board's revision, so an app holding an older copy reloads.
+// Board use cases: load a board, apply a rule from core/board.ts, save it. Server-side changes bump the revision.
 import type { Card } from "../../shared/types";
 import type { FieldType } from "../../shared/fields";
 import * as rules from "../core/board";
@@ -8,7 +7,6 @@ import { boardOfCard, getBoard, hasBoard, newBoard, removeBoard, saveBoard, setB
 export { BOARD_ID, MAIN_BOARD, StaleBoard } from "../core/board";
 export { boardOfCard, computerOf, getBoard, hasBoard, listBoards } from "../infra/board-store";
 
-/** Save a board after a server-side change, with a new revision. */
 function changed(bid: string) {
   rules.bumpRev(getBoard(bid));
   saveBoard(bid);

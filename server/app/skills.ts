@@ -1,15 +1,12 @@
-// Skills: reusable know-how each agent chooses (its definition lists them: a skills.sh id, or text written by
-// hand). Their files live in the board's computer, in a folder of the agent's own so agents never share them:
-// ~/agents/<agent>/skills/<name>/SKILL.md (frontmatter with name + description, then the instructions), plus
-// any scripts or reference files beside it, put there the first time the agent runs on that board.
-// An agent's prompt lists only its own skills' names and descriptions; use_skill loads one when a task calls for it.
+// Each agent's skills (a skills.sh id or hand-written) live in the board's computer at ~/agents/<agent>/skills/<name>/SKILL.md.
+// The prompt lists only names and descriptions; use_skill loads one when a task calls for it.
 import { Type } from "@earendil-works/pi-ai";
 import { defineTool } from "../infra/runtime";
 import { computerState, currentBoard, GUEST_HOME, sbExec, sbWrite, shq } from "../infra/sandbox";
 import { currentTenant } from "../infra/tenant";
 import type { AgentSkill, Skill, SkillPreview, SkillResult } from "../../shared/types";
 
-/** An agent's own skills folder in the board's computer (agent names are lowercase letters, digits and dashes). */
+/** The agent's own skills folder (agent names are lowercase letters, digits and dashes). */
 const skillsDir = (agent: string) => `${GUEST_HOME}/agents/${agent}/skills`;
 const SKILL_NAME = /^(?=.{1,64}$)[a-z0-9]+(-[a-z0-9]+)*$/; // the spec's rule
 const DIRECTORY = "https://skills.sh";
@@ -36,8 +33,6 @@ async function saveSkill(dir: string, s: Skill) {
   await sbWrite(`${dir}/${s.name}/SKILL.md`, `---\nname: ${s.name}\ndescription: ${JSON.stringify(s.description.replace(/\s+/g, " ").trim())}\n---\n\n${s.instructions.trim()}\n`);
 }
 
-// ---- The skills.sh directory ----
-
 export async function searchSkills(q: string): Promise<SkillResult[]> {
   const res = await fetch(`${DIRECTORY}/api/search?${new URLSearchParams({ q, limit: "24" })}`, { signal: AbortSignal.timeout(15_000) });
   if (!res.ok) throw new Error(`skills.sh search failed (${res.status})`);
@@ -54,10 +49,7 @@ export function skillHash(files: SkillFile[]) {
   return h.digest("hex");
 }
 
-/**
- * A directory skill's files, checked: safe relative paths, a size cap, a SKILL.md, and, given `hash`, exactly
- * the files that were checked before adding it (a skill changed since then is refused, not installed).
- */
+/** A directory skill's files, checked: safe relative paths, a size cap, a SKILL.md and, given `hash`, no change since it was checked. */
 export async function fetchSkill(id: string, hash?: string) {
   if (!isSkillId(id)) throw new Error("not a skills.sh skill id");
   const res = await fetch(`${DIRECTORY}/api/download/${id.split("/").map(encodeURIComponent).join("/")}`, { signal: AbortSignal.timeout(30_000) });
@@ -87,15 +79,12 @@ export async function previewSkill(id: string): Promise<SkillPreview> {
   };
 }
 
-/** Write a directory skill into `dir/<name>` in the board's computer, replacing an older copy of it. */
 async function installSkill(dir: string, skill: AgentSkill) {
   const { files } = await fetchSkill(skill.source!, skill.hash);
   const folder = `${dir}/${skill.name}`;
   await shell(`rm -rf ${shq(folder)}`);
   for (const f of files) await sbWrite(`${folder}/${f.path}`, f.contents);
 }
-
-// ---- An agent's skills ----
 
 /** An agent's skills from untrusted input: each from skills.sh (its id) or written by hand, named by the spec's rule. */
 export function agentSkills(v: any): AgentSkill[] {
@@ -116,7 +105,6 @@ export function agentSkills(v: any): AgentSkill[] {
   }).slice(0, 50);
 }
 
-/** What syncing an agent's skills does to its folder, given the skill folders already there. */
 export function planSync(present: string[], skills: AgentSkill[]) {
   const wanted = new Set(skills.map((s) => s.name));
   return {
@@ -131,10 +119,7 @@ const RETRY_MS = 5 * 60_000; // a skill that failed to install is tried again af
 const synced = new Map<string, { list: string; ready: string[]; failed: boolean; at: number }>();
 const syncKey = (agent: string) => `${currentTenant()}/${currentBoard()}/${agent}`;
 
-/**
- * Make the agent's folder in the board's computer match its skills, and return the names that are ready to use.
- * Runs again only when the list changes, a skill failed (after RETRY_MS), or use_skill finds a folder missing.
- */
+/** Sync the agent's skills folder and return the ready names; reruns only on a list change, a failure (after RETRY_MS) or a missing folder. */
 export async function syncSkills(agent: string, skills: AgentSkill[]): Promise<string[]> {
   const key = syncKey(agent), list = JSON.stringify(skills), hit = synced.get(key);
   if (hit?.list === list && !(hit.failed && Date.now() - hit.at > RETRY_MS)) return hit.ready;
@@ -152,17 +137,13 @@ export async function syncSkills(agent: string, skills: AgentSkill[]): Promise<s
   return ready;
 }
 
-/**
- * Sync an agent's skills into its board's computer if that's on now (otherwise they go in on the agent's first
- * run there, so saving never starts a computer). Says whether it did, and which skills failed.
- */
+/** Sync only if the board's computer is on, so saving never starts one; otherwise skills go in on the agent's first run there. */
 export async function syncIfRunning(agent: string, skills: AgentSkill[]) {
   if (!skills.length || computerState(currentBoard()).state !== "running") return { installed: false, failed: [] as string[] };
   const ready = await syncSkills(agent, skills).catch(() => [] as string[]);
   return { installed: true, failed: skills.map((s) => s.name).filter((n) => !ready.includes(n)) };
 }
 
-/** The Skills part of an agent's prompt (only skills that are ready in the computer). */
 export const skillsPrompt = (agent: string, skills: AgentSkill[]) => skills.length
   ? `## Skills\nWhen a task matches one of these skills, call use_skill first to load its instructions, then follow them. They live in ${skillsDir(agent)}.\n${skills.map((s) => `- ${s.name}: ${s.description.slice(0, 300)}`).join("\n")}`
   : "";

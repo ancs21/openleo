@@ -17,7 +17,7 @@ function sourcesOf(parts: Message["parts"]) {
   return [...new Set(urls.filter((u) => /^https?:\/\//.test(u)))];
 }
 
-/** Render one assistant message: consecutive tool parts become one ToolRun; the footer shows once it's done. */
+/** Consecutive tool parts become one ToolRun; the footer shows once the reply is done. */
 export function AssistantMessage({ m, streaming, agent, model, onRetry }: { m: Message; streaming: boolean; agent: string; model: string; onRetry?: () => void }) {
   const [, tick] = useState(0);
   useEffect(() => { if (!streaming) return; const id = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(id); }, [streaming]);

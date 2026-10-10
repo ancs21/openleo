@@ -2,7 +2,6 @@ import type { AgentDef } from "../../../shared/types";
 
 export type Template = Omit<AgentDef, "model" | "subagents">;
 
-/** Starting points on the new-agent screen. */
 export const TEMPLATES: Template[] = [
   {
     name: "researcher",

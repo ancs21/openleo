@@ -11,7 +11,6 @@ import { FieldChips } from "./CardFields";
 import { useApp } from "../../stores/app-store";
 import { AgentIcon } from "../../components/AgentIcon";
 
-/** Coloured status label used on cards and in the card panel. */
 export function StatusPill({ status }: { status: TaskCard["status"] }) {
   return (
     <span className={`inline-flex h-5.5 w-fit items-center gap-1 rounded-[6px] px-1.5 text-[11.5px] font-medium ${STATUS[status].cls}`}>
@@ -67,7 +66,6 @@ export function CardView({ card, listId, hidden, onOpenTask }: {
             <Icon size={12} strokeWidth={2.2}>{glyphs.repeat}</Icon>
           </span>
         )}
-        {/* The agents that worked on it, as icons on the right (name on hover). */}
         {taskAgents(card).map((name) => (
           <span key={name} title={name} aria-label={`Agent ${name}`} className="flex size-5.5 items-center justify-center rounded-[6px] bg-field text-ink-2 shadow-hairline">
             <AgentIcon icon={agents.find((a) => a.name === name)?.icon} className="size-3" />

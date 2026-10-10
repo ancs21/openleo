@@ -1,6 +1,5 @@
-// Tenants: each ChatGPT account (one person) has its own data folder, tenants/<id>/, holding its agents,
-// skills, connected apps, boards, conversations and host workspace. A signed-in request runs inside its
-// tenant (inTenant), and every data path resolves through dataDir(), so one account never sees another's data.
+// Each account has its own folder, tenants/<id>/. Requests run inside their tenant (inTenant) and every data path
+// goes through dataDir(), so one account never sees another's data.
 import { AsyncLocalStorage } from "node:async_hooks";
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 
@@ -8,7 +7,7 @@ import { HOME } from "./config";
 const ROOT = `${HOME}/tenants`;
 const scope = new AsyncLocalStorage<string>();
 
-/** Data used to sit next to the code (the old default home, "."). Move it into the default home once, keeping the vault's permissions. */
+/** Move data from the old default home (".") into the default one, once. */
 export function moveOldData(home = HOME, from = ".") {
   if (home !== "data") return; // a home that was chosen on purpose is left alone
   for (const name of ["tenants", "owner", "sessions.json", "vault.json", "cache"]) {
@@ -30,14 +29,12 @@ export function currentTenant() {
   return t;
 }
 
-/** The current tenant's folder, or a folder inside it (created on first use). */
 export function dataDir(sub = "") {
   const dir = sub ? `${ROOT}/${currentTenant()}/${sub}` : `${ROOT}/${currentTenant()}`;
   mkdirSync(dir, { recursive: true });
   return dir;
 }
 
-/** A tenant's folder by id, outside of a request (sign-in, startup). */
 export const tenantDir = (tenant: string) => `${ROOT}/${tenant}`;
 
 export const listTenants = () => (existsSync(ROOT) ? readdirSync(ROOT).filter((t) => /^[0-9a-f]{16}$/.test(t)) : []);
@@ -50,7 +47,7 @@ export const isOwner = (tenant: string) => ownerTenant() === tenant;
 /** Data from before tenants existed; the first account to sign in takes it over. */
 const LEGACY = ["agents", "skills", "boards", "board.json", "conversations", "workspace", "mcp.json"];
 
-/** Create a tenant's folder on first sign-in. Returns true when it's new. The first one becomes the install's owner. */
+/** Returns true when new. The first tenant becomes the owner. */
 export function ensureTenant(tenant: string) {
   const dir = `${ROOT}/${tenant}`;
   if (existsSync(dir)) return false;

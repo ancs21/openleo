@@ -12,10 +12,7 @@ import { PanelResizer } from "../../components/PanelResizer";
 import { useBoard } from "./store";
 import { LEO, LEO_MODEL, type Effort, type Tuning } from "../../../shared/types";
 
-/**
- * Leo: the board's built-in assistant, in a side panel. One current conversation per board.
- * `escape`: Esc closes it (off while a card is open next to it: Esc closes the card first).
- */
+/** `escape`: Esc closes it (off while a card is open next to it, so Esc closes the card first). */
 export function Leo({ onClose, escape }: { onClose: () => void; escape: boolean }) {
   const { boardId, load } = useBoard();
   const width = usePanels((s) => s.panelWidth.leo);
@@ -33,7 +30,6 @@ export function Leo({ onClose, escape }: { onClose: () => void; escape: boolean 
   useEffect(() => setChat(storage.get(chatKey) ?? `${LEO}-${boardId}`), [chatKey]);
   const newChat = () => { const id = `${LEO}-${boardId}-${crypto.randomUUID().slice(0, 8)}`; storage.set(chatKey, id); setChat(id); };
   // It changes the board (and can add agents) as it works: keep both fresh while the panel is open.
-  // ponytail: polls agents too; push changes from the server if this ever costs too much.
   useEffect(() => {
     const t = setInterval(() => { void load(); void useApp.getState().loadAgents().catch(() => {}); }, 2000);
     return () => clearInterval(t);

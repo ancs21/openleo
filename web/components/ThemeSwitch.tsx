@@ -6,7 +6,6 @@ const OPTIONS: { value: Theme; label: string; icon: React.ReactNode }[] = [
   { value: "system", label: "System", icon: <><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></> },
 ];
 
-/** Segmented Light / Dark / System switch with a sliding pill. */
 export function ThemeSwitch({ className = "" }: { className?: string }) {
   const theme = useTheme();
   const i = OPTIONS.findIndex((o) => o.value === theme);

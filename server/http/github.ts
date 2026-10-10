@@ -34,7 +34,7 @@ export const githubRoutes = {
       return Response.json(githubRows(bid, list.id));
     }, 502),
   },
-  // Add a row as a card to another list (dropped at `index`, else at the top); that list's agent starts on it, as when a person adds a card there.
+  // Copy a row as a card into another list; that list's agent starts on it.
   "/api/boards/:board/lists/:list/github/cards": {
     POST: safe(async (req: Bun.BunRequest<"/api/boards/:board/lists/:list/github/cards">) => {
       const bid = boardParam(req.params.board);

@@ -5,7 +5,6 @@ import { PlanDialogs } from "../features/auth/PlanDialogs";
 import { ComputerSetup } from "../features/setup/ComputerSetup";
 import { useApp } from "../stores/app-store";
 
-/** Loads app data once, keeps sign-in fresh, hosts global dialogs and notices. */
 export function RootLayout() {
   const notice = useApp((s) => s.notice);
   const setNotice = useApp((s) => s.setNotice);

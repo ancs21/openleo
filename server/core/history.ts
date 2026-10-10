@@ -1,4 +1,4 @@
-// Convert a pi agent transcript into the chat UI's message parts (one assistant message per user turn).
+// Converts an agent transcript into chat UI message parts (one assistant message per user turn).
 import type { Message, Part, ToolPart } from "../../shared/types";
 
 type Content = { type: string; text?: string; thinking?: string; id?: string; name?: string; arguments?: unknown; data?: string; mimeType?: string };

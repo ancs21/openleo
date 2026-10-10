@@ -1,5 +1,4 @@
-// GitHub lists, the rules: what a list's GitHub source may be, and how GitHub's answers become rows.
-// Fetching and caching them is in infra/github.ts; turning a row into a card is in app/github.ts.
+// GitHub list rules: what a list's source may be, and how GitHub's answers become rows.
 import type { GithubRow, ListSource } from "../../shared/types";
 
 export const MAX_ROWS = 100;
@@ -8,7 +7,6 @@ const MAX_QUERY = 500;
 /** `project:owner/12`: a GitHub project board instead of a search. */
 export const PROJECT = /^project:([\w-]+)\/(\d+)$/;
 
-/** A list's source as the app sent it: a GitHub search query, or nothing. */
 export function githubSource(raw: unknown): ListSource | undefined {
   const r = raw as { kind?: unknown; query?: unknown } | null;
   const query = typeof r?.query === "string" ? r.query.trim().slice(0, MAX_QUERY) : "";

@@ -1,7 +1,4 @@
-// Getting a computer for agents on this machine: what's installed and running (Apple's container tool on new Macs,
-// Docker on any Mac, Linux or Windows PC), and the setup steps OpenLeo can do itself: turn on the container
-// service, build the computer image (for this machine's chip), start Docker.
-// Installing either tool is the person's own step (an installer they open); everything after that is a button.
+// Detects Apple's container tool or Docker and runs the setup steps after install (service, image, Docker).
 import { existsSync } from "node:fs";
 import { release } from "node:os";
 import { APPLE_IMAGE, DOCKER_IMAGE, PUBLISHED_IMAGE } from "./config";
@@ -12,9 +9,7 @@ const RECIPE = `${process.cwd()}/computer`;
 export type SetupJob = { step: "start" | "build"; log: string[]; done: boolean; error?: string };
 export type Tool = "apple" | "docker";
 export type SetupStatus = {
-  /** darwin, linux or win32: the steps and their words differ a little. */
   platform: NodeJS.Platform;
-  /** This Mac can run computers natively: Apple silicon and macOS 26 or later. */
   native: boolean;
   apple: { installed: boolean; running: boolean; image: boolean };
   /** running: Docker is up and runs Linux containers. windows: it's up but set to Windows containers (Windows only). */
@@ -22,7 +17,7 @@ export type SetupStatus = {
   job?: SetupJob;
 };
 
-/** Run a command; its output when it worked, else undefined. A missing command, or one that hangs, is a no. */
+/** Output on success, else undefined (also for a missing or hanging command). */
 async function run(cmd: string[], timeoutMs = 8_000) {
   try {
     const p = Bun.spawn(cmd, { stdout: "pipe", stderr: "ignore" });
@@ -53,10 +48,7 @@ export async function setupStatus(): Promise<SetupStatus> {
   };
 }
 
-/**
- * Run setup commands one after another as the current job, keeping the last lines of their output for the page.
- * When one fails and there's a fallback, run the fallback's commands instead.
- */
+/** Run commands in order as the current job, keeping recent output; on failure run the fallback if any. */
 function runJob(step: SetupJob["step"], commands: string[][], onDone: () => void, fallback?: string[][]) {
   if (g.openleoSetupJob && !g.openleoSetupJob.done) throw new Error("setup is already working on something");
   const job: SetupJob = (g.openleoSetupJob = { step, log: [], done: false });
@@ -78,14 +70,11 @@ function runJob(step: SetupJob["step"], commands: string[][], onDone: () => void
   })();
 }
 
-/** Turn on Apple's container service (it downloads the small Linux kernel it needs the first time). */
+/** Downloads the Linux kernel the first time. */
 export const startApple = (onDone: () => void) =>
   runJob("start", [["container", "system", "start", "--enable-kernel-install"]], onDone);
 
-/**
- * Get OpenLeo's computer image with Apple's tool or Docker: download the published one (for this machine's chip) and
- * name it as OpenLeo runs it. When that fails and this install has the recipe, build it here (about 10 minutes).
- */
+/** Pull the published image and tag it; if that fails and the recipe is here, build it (about 10 minutes). */
 export function buildImage(tool: Tool, onDone: () => void) {
   const cli = tool === "apple" ? "container" : "docker", name = tool === "apple" ? APPLE_IMAGE : DOCKER_IMAGE;
   const download = [[cli, "image", "pull", PUBLISHED_IMAGE], [cli, "image", "tag", PUBLISHED_IMAGE, name]];
@@ -96,11 +85,7 @@ export function buildImage(tool: Tool, onDone: () => void) {
   runJob("build", download, onDone, existsSync(`${RECIPE}/Dockerfile`) ? build : undefined);
 }
 
-/**
- * Start Docker: Docker Desktop on a Mac or Windows; on Linux, Docker Desktop's service for this user (Docker Engine
- * runs as a system service, which needs an administrator: the page says how). On Windows, also switch Docker Desktop
- * to Linux containers when it's set to Windows ones.
- */
+/** On Linux only Docker Desktop's user service can start without an admin. On Windows, also switch to Linux containers. */
 export async function openDocker() {
   if (process.platform === "darwin") return ok(["open", "-a", "Docker"]);
   if (process.platform === "win32") {

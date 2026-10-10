@@ -1,4 +1,4 @@
-// The GitHub list setup in plain choices (what to show, which repo) and the search text they stand for.
+// GitHub list setup as plain choices (what to show, which repo) and the search text they stand for.
 
 export type Show = "prs" | "issues" | "review" | "project";
 export const SHOWS: { value: Show; label: string }[] = [
@@ -9,10 +9,10 @@ export const SHOWS: { value: Show; label: string }[] = [
 ];
 const BASE: Record<Exclude<Show, "project">, string> = { prs: "is:pr is:open", issues: "is:issue is:open", review: "is:pr is:open review-requested:@me" };
 
-/** The search for these choices (`repo` "": every repo the token reads). For a project, `repo` is its `owner/number`. */
+/** `repo` "": every repo the token reads. For a project, `repo` is its `owner/number`. */
 export const buildQuery = (show: Show, repo: string) => (show === "project" ? `project:${repo}` : `${BASE[show]}${repo ? ` repo:${repo}` : ""}`);
 
-/** The choices a search was made from, or undefined when it was written by hand. */
+/** undefined when the search was written by hand. */
 export function readQuery(query: string): { show: Show; repo: string } | undefined {
   const project = /^project:(\S+)$/.exec(query.trim())?.[1];
   if (project) return { show: "project", repo: project };

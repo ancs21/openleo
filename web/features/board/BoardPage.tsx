@@ -1,5 +1,4 @@
-// Kanban board: wallpaper, floating translucent lists, pill top bar, ⌘K search.
-// Native drag & drop (Pragmatic DnD) with a tilted drag preview and a live placeholder where the drop lands.
+// Kanban board with native drag and drop: a tilted drag preview and a live placeholder where the drop lands.
 import { usePanels } from "../../stores/panels";
 import { useEffect, useRef, useState } from "react";
 import { Outlet, useMatch, useNavigate, useParams } from "react-router";
@@ -52,12 +51,11 @@ export function BoardPage() {
   useEffect(() => { void open(boardId); }, [open, boardId]);
   useEffect(() => { void load(); }, [load, agents.length]);
 
-  // One monitor drives the drag: placeholder while hovering, then the move/run on drop.
   useEffect(() => combine(
     monitorForElements({
       onDragStart({ source }) {
         const s = asSource(source.data);
-        play("press"); // picked up
+        play("press");
         useBoard.getState().setDrag({ kind: s.type, id: s.type === "card" ? s.cardId : s.listId, height: source.element.offsetHeight, width: source.element.offsetWidth, over: null });
       },
       onDrag({ source, location }) {
@@ -77,7 +75,7 @@ export function BoardPage() {
         else if (r.type === "card" && s.type === "card") moveCard(s.cardId, r.listId, r.index);
         else if (r.type === "list" && s.type === "list") moveList(s.listId, r.index);
         else return;
-        play("tick"); // dropped in a new place
+        play("tick");
       },
     }),
     autoScrollForElements({ element: scroller.current! }),
@@ -86,9 +84,9 @@ export function BoardPage() {
   const q = query.trim().toLowerCase();
   const matches = (c: Card) => !q || `#${c.num}` === q ||
     `${c.title} ${c.notes} ${c.result ?? ""}`.toLowerCase().includes(q);
-  // A plain wheel over the board background scrolls sideways (lists keep scrolling their own cards). A sideways swipe
-  // over a list scrolls the board: WebKit doesn't pass it on from a list that only scrolls up and down.
-  // Not React's onWheel: that listener is passive, and the swipe must not scroll twice where the browser does pass it on.
+  // A plain wheel over the board scrolls sideways. A sideways swipe over a list scrolls the board: WebKit doesn't
+  // pass it on from a list that only scrolls vertically. Not React's onWheel: that listener is passive, and the swipe
+  // must not scroll twice where the browser does pass it on.
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
@@ -103,7 +101,6 @@ export function BoardPage() {
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  // Lists, with a placeholder where a dragged list would land.
   const listOver = drag?.kind === "list" && drag.over?.type === "list" ? drag.over.index : -1;
   const columns = withPlaceholder(board?.lists ?? [], (l) => l.id, drag?.id, listOver).map((l) => l === PLACEHOLDER
     ? <Placeholder key="placeholder" height={Math.min(drag!.height, 240)} width={drag!.width} />

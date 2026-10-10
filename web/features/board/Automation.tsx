@@ -18,7 +18,6 @@ const heading = "text-[13.5px] font-semibold text-ink";
 const hint = "text-[12.5px] text-ink-3";
 const row = "flex min-h-11 items-center gap-3 rounded-card border border-line px-3 py-2";
 
-/** A list's automation: who picks up new cards added to it, and which of its cards repeat. */
 export function Automation({ listId, onOpenTask }: { listId: string; onOpenTask: (id: string) => void }) {
   const { board, setListAgent, editTask, setAutomationList } = useBoard();
   const agents = useApp((s) => s.agents);
@@ -80,7 +79,6 @@ export function Automation({ listId, onOpenTask }: { listId: string; onOpenTask:
   );
 }
 
-/** Pick a card, its agent and when: the card then repeats (it can be fine-tuned in its agent tab). */
 function NewSchedule({ cards, onDone }: { cards: TaskCard[]; onDone: () => void }) {
   const editTask = useBoard((s) => s.editTask);
   const agents = useApp((s) => s.agents);

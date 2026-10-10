@@ -12,7 +12,6 @@ export function Icon({ children, size = 14, strokeWidth = 2, fill = "none", clas
   );
 }
 
-/** Shared glyphs, used across features. */
 export const glyphs = {
   think: <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />,
   write: <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z" />,

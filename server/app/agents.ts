@@ -1,5 +1,4 @@
-// A board's agents: their definitions (saved by infra/agent-store.ts), checked, drafted from a plain-language
-// description, created and changed. Leo and the memory keeper are built in and never saved with them.
+// A board's agents: drafted, created, changed and deleted. Leo and the memory keeper are built in and never saved.
 import { EFFORTS, LEO, MEMORY_KEEPER, type AgentDef } from "../../shared/types";
 import { agentNames, hasAgentFile, readAgentFile, removeAgentFile, writeAgentFile } from "../infra/agent-store";
 import { deleteConversations } from "../infra/conversations";
@@ -61,7 +60,7 @@ The agent can search the web, read web pages, read and save files, run commands,
   return validate({ ...body, model, subagents: [] }, ["new", "draft"].includes(name) ? `${name}-agent` : name);
 }
 
-/** Save a new agent on the current board (Leo's create_agent). It gets the model of the board's newest agent, else Leo's. */
+/** Leo's create_agent. The new agent gets the model of the board's newest agent, else Leo's. */
 export async function createDef(body: { name: string; title?: string; description: string; instructions: string }) {
   if (hasAgentFile(body.name)) throw new Error(`there's already an agent "${body.name}" on this board`);
   const def = validate({ ...body, model: listDefs().at(-1)?.model ?? leoSettings().model }, body.name);
@@ -70,7 +69,7 @@ export async function createDef(body: { name: string; title?: string; descriptio
   return def;
 }
 
-/** Change a saved agent's description or instructions (Leo's update_agent); its open chats restart with them. */
+/** Leo's update_agent; the agent's open chats restart with the change. */
 export async function updateDef(name: string, patch: { title?: string; description?: string; instructions?: string }) {
   const def = validate({ ...loadDef(name), ...patch }, name);
   await writeAgentFile(def);
@@ -82,7 +81,7 @@ export async function updateDef(name: string, patch: { title?: string; descripti
 export async function saveDef(body: unknown, name: string) {
   const def = validate(body, name);
   const prev = hasAgentFile(def.name) ? loadDef(def.name) : null;
-  if (!prev && !def.icon) def.icon = await pickIcon(`${def.name}: ${def.description}`).catch((e) => void console.warn("icon pick failed:", e.message)); // a new agent without a chosen icon
+  if (!prev && !def.icon) def.icon = await pickIcon(`${def.name}: ${def.description}`).catch((e) => void console.warn("icon pick failed:", e.message));
   await writeAgentFile(def);
   const rest = (d: AgentDef) => JSON.stringify({ ...d, model: undefined, effort: undefined });
   if (prev && rest(prev) === rest(def)) retune(def.name, def.model, def.effort);
@@ -90,7 +89,6 @@ export async function saveDef(body: unknown, name: string) {
   return def;
 }
 
-/** Delete an agent with its chats. */
 export function deleteDef(name: string) {
   if (!NAME.test(name)) throw new Error("bad name");
   removeAgentFile(name);

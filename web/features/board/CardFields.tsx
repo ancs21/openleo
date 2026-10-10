@@ -14,7 +14,6 @@ const cell = "h-8 w-full rounded-[6px] bg-transparent px-2 text-[13px] text-ink 
 export const TYPE_LABELS: Record<FieldType, string> = { text: "Text", number: "Number", date: "Date", link: "Link", select: "Choice" };
 const PLACEHOLDER: Record<FieldType, string> = { text: "Empty", number: "0", date: "", link: "https://…", select: "" };
 
-/** A custom field on a card: its name (a menu to delete it from the board) and its value, edited in place. */
 export function CardField({ card, field }: { card: TaskCard; field: Field }) {
   const { board, setFields } = useBoard();
   const [menu, setMenu] = useState(false);
@@ -34,7 +33,7 @@ export function CardField({ card, field }: { card: TaskCard; field: Field }) {
   );
 }
 
-/** A card's value for a field, edited in place; `bare`: as a table cell, without the field box. */
+/** `bare`: as a table cell, without the field box. */
 export function FieldValue({ card, field, bare = false }: { card: TaskCard; field: Field; bare?: boolean }) {
   const box = bare ? cell : input;
   const setValue = useBoard((s) => s.setValue);
@@ -66,7 +65,6 @@ export function FieldValue({ card, field, bare = false }: { card: TaskCard; fiel
   );
 }
 
-/** "Add field": a new custom field on every card of the board. */
 export function AddField({ className }: { className: string }) {
   const { board, setFields } = useBoard();
   const [open, setOpen] = useState(false);
@@ -102,7 +100,7 @@ export function AddField({ className }: { className: string }) {
   );
 }
 
-/** Filled-in values for the card on the board: "Priority 3", at most `max`. */
+/** At most `max` filled-in values, like "Priority 3". */
 export function FieldChips({ card, max = 3 }: { card: TaskCard; max?: number }) {
   const fields = useBoard((s) => s.board?.fields ?? NONE);
   const filled = fields.filter((f) => card.values?.[f.id]).slice(0, max);

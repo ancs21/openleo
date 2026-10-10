@@ -19,8 +19,7 @@ export function timeAgo(t?: number) {
   return `${Math.round(s / 86400)}d ago`;
 }
 
-/** A name typed in plain words, as an id: lowercase words joined by dashes ("Account Manager" -> "account-manager"). */
+/** "Account Manager" -> "account-manager" */
 export const toId = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+/, "").slice(0, 40);
 
-/** A new agent's ID from the name you typed ("Crypto Researcher" -> "crypto-researcher"). */
 export const agentId = (title: string) => toId(title.trim()).replace(/-+$/, "");

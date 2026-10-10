@@ -1,5 +1,4 @@
-// Real data instead of the demo: @ = attach images or mention a subagent, / = OpenLeo commands and prompt
-// templates, model picker = the agent's actual model (saved), mic = browser speech recognition.
+// @ attaches images or mentions a subagent, / runs commands and templates, mic uses browser speech recognition.
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { accentChain, ACCENTS, createShader, playSweep } from "glimm";
 import { modelLabel, providerOf } from "../../lib/format";
@@ -30,7 +29,6 @@ function parseToken(draft: string): { kind: "at" | "slash"; query: string; start
   return { kind: m[2] === "@" ? "at" : "slash", query: m[3]!.toLowerCase(), start: m.index + m[1]!.length };
 }
 
-/** Read an image file as a JPEG data URL, downscaled to MAX_IMAGE_PX. */
 async function readImage(file: File): Promise<string> {
   const bmp = await createImageBitmap(file);
   const scale = Math.min(1, MAX_IMAGE_PX / Math.max(bmp.width, bmp.height));
@@ -105,7 +103,6 @@ export default function PromptBar({ placeholder, busy, onSend, onStop, subagents
 
   useEffect(() => { setActive(0); setEngaged(false); }, [menu, query]);
 
-  // one gliding highlight follows the active row
   useLayoutEffect(() => {
     const t = rowRefs.current[active];
     if (t) setRowBox({ top: t.offsetTop, height: t.offsetHeight });
@@ -118,7 +115,6 @@ export default function PromptBar({ placeholder, busy, onSend, onStop, subagents
     if (t) setModelBox({ top: t.offsetTop, height: t.offsetHeight });
   }, [modelOpen, modelHovered, modelIndex]);
 
-  // align the model menu to its trigger; scroll the current model into view
   useLayoutEffect(() => {
     if (!modelOpen || !anchorRef.current || !modelRef.current) return;
     const a = anchorRef.current.getBoundingClientRect(), t = modelRef.current.getBoundingClientRect();
@@ -129,7 +125,7 @@ export default function PromptBar({ placeholder, busy, onSend, onStop, subagents
 
   useEffect(() => { if (!modelOpen) setModelHovered(null); }, [modelOpen]);
 
-  // Rainbow sweep (glimm). Pin Math.random while building so the hue phase is the same every time.
+  // Pin Math.random while building so the hue phase is the same every time.
   const makeShader = () => {
     const canvas = glimmRef.current;
     if (!canvas) return null;
@@ -191,7 +187,6 @@ export default function PromptBar({ placeholder, busy, onSend, onStop, subagents
     input.style.overflowY = h > 120 ? "auto" : "hidden";
   }, [draft, expanded]);
 
-  // click outside closes menus
   const rootRef = useRef<HTMLDivElement>(null);
   useClickOutside(rootRef, () => { setModelOpen(false); setPlusOpen(false); }, modelOpen || plusOpen);
 
@@ -240,7 +235,6 @@ export default function PromptBar({ placeholder, busy, onSend, onStop, subagents
     <div ref={rootRef} className="w-full">
       <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
       <div ref={anchorRef} className="relative">
-        {/* @ / slash menu */}
         {menu && (
           <div onMouseLeave={() => setEngaged(false)} className="absolute inset-x-0 bottom-full z-10 mb-2 animate-pop-in rounded-[10px] bg-surface p-1 shadow-raised"
             style={{ transformOrigin: "bottom center" }}>
@@ -264,7 +258,6 @@ export default function PromptBar({ placeholder, busy, onSend, onStop, subagents
           </div>
         )}
 
-        {/* model menu */}
         {modelOpen && (
           <div ref={modelListRef} onMouseLeave={() => setModelHovered(null)}
             className={`absolute z-10 max-h-80 w-64 animate-pop-in overflow-y-auto rounded-card bg-surface shadow-raised ${picker === "effort" ? "p-3" : "p-1"}`}
@@ -301,7 +294,6 @@ export default function PromptBar({ placeholder, busy, onSend, onStop, subagents
           </div>
         )}
 
-        {/* composer */}
         <div className="relative isolate flex flex-col gap-1.5 overflow-hidden rounded-[14px] border border-line bg-surface p-1.5 shadow-card transition-[border-color] duration-150 focus-within:border-line-strong">
           <canvas ref={glimmRef} aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 h-full w-full" style={{ borderRadius: "inherit" }} />
           <span ref={measureRef} aria-hidden="true" className="pointer-events-none invisible absolute text-[13px] leading-[18px] whitespace-pre">{draft}</span>
@@ -390,7 +382,6 @@ export default function PromptBar({ placeholder, busy, onSend, onStop, subagents
 const STEPS: Effort[] = ["low", "medium", "high", "xhigh", "max"];
 const KNOB = 16; // px; the track is this plus 4px around it, so the knob always sits inside
 
-/** Thinking time, Light to Max: tap a step or drag the knob; the track fills up to it. */
 function EffortSlider({ value, onChange }: { value: Effort; onChange: (e: Effort) => void }) {
   const [dragAt, setDragAt] = useState<number | null>(null); // while dragging: shown, saved on release
   const at = dragAt ?? STEPS.indexOf(value); // -1: thinking is off

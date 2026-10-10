@@ -1,10 +1,8 @@
-// ToolChips -> ToolRun/ToolRow, wired to live tool calls.
 import { useState } from "react";
 import { Icon, glyphs } from "../../../components/Icon";
 import { Chevron, Reveal, Shimmer, Spinner } from "../../../components/motion";
 import type { ToolPart } from "../useAgent";
 
-/** Map a raw tool call to a ToolChips-style row: icon, verb, chip. */
 function describe(p: ToolPart) {
   const a = (p.input ?? {}) as Record<string, string>;
   if (p.toolName === "bash") return { icon: glyphs.run, label: "Run", chip: a.command, mono: true };
@@ -77,7 +75,6 @@ export function ToolRow({ part }: { part: ToolPart }) {
   );
 }
 
-/** ToolChips header: "N tool calls" that collapses the run. */
 export function ToolRun({ parts }: { parts: ToolPart[] }) {
   const [open, setOpen] = useState(true);
   const running = parts.some((p) => p.state === "input-available");

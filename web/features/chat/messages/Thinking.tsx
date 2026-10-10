@@ -3,7 +3,6 @@ import { Icon, glyphs } from "../../../components/Icon";
 import { Markdown } from "../../../components/Markdown";
 import { Chevron, Reveal, Shimmer } from "../../../components/motion";
 
-/** ThinkingState: shimmering label while reasoning streams, expandable trace. */
 export function Thinking({ text, active }: { text: string; active: boolean }) {
   const [open, setOpen] = useState(false);
   return (

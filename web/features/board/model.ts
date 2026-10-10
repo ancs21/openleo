@@ -3,12 +3,11 @@ import type { Board } from "../../../shared/types";
 
 export type Edge = "top" | "bottom" | "left" | "right";
 
-/** What is being dragged (attached to the draggable as data). */
 export type DragSource =
   | { type: "card"; cardId: string; listId: string; /** a GitHub list's row (cardId is its key): dropping it makes a card */ row?: true }
   | { type: "list"; listId: string };
 
-/** What it is over (innermost drop target's data, plus the closest edge where relevant). */
+/** The innermost drop target's data, plus the closest edge where relevant. */
 export type DropTarget =
   | { type: "card"; cardId: string; listId: string; edge: Edge | null }
   | { type: "list-body"; listId: string }
@@ -16,15 +15,11 @@ export type DropTarget =
   | { type: "list"; listId: string; edge: Edge | null }
   | { type: "placeholder" }; // hovering the placeholder itself: keep the current slot (prevents flicker)
 
-/** Where a drop would land: a slot in a list, or a list position. */
 export type DropResult =
   | { type: "card"; listId: string; index: number }
   | { type: "list"; index: number };
 
-/**
- * Resolve a hover/drop. Card indices are positions in the destination list *without* the dragged card,
- * which is also where the placeholder renders. Returns null when nothing would change.
- */
+/** Card indices exclude the dragged card (that is where the placeholder renders). Null when nothing would change. */
 export function resolveDrop(board: Board, source: DragSource, target: DropTarget | undefined, current: DropResult | null = null): DropResult | null {
   if (!target) return null;
   if (target.type === "placeholder") return current;
@@ -59,10 +54,7 @@ const cardsOf = (b: Board, listId: string) => b.lists.find((l) => l.id === listI
 
 export const PLACEHOLDER = Symbol("placeholder");
 
-/**
- * Items with the placeholder slotted in at `index`, counted among the items *other than* the dragged one
- * (the same index space resolveDrop uses). The dragged item stays in place; index < 0 means no placeholder.
- */
+/** Placeholder at `index`, counted without the dragged item (resolveDrop's index space); index < 0: none. */
 export function withPlaceholder<T>(items: T[], idOf: (item: T) => string, dragId: string | undefined, index: number): (T | typeof PLACEHOLDER)[] {
   if (index < 0) return items;
   const out: (T | typeof PLACEHOLDER)[] = [];

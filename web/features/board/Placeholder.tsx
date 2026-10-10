@@ -1,10 +1,7 @@
 import { useEffect, useRef } from "react";
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 
-/**
- * Where the dragged card/list will land (sized like the thing being dragged). It is a drop target itself,
- * so hovering it keeps the slot instead of resolving to the list below and flickering.
- */
+/** A drop target itself, so hovering it keeps the slot instead of resolving to the list below and flickering. */
 export function Placeholder({ height, width }: { height: number; width?: number }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => dropTargetForElements({ element: ref.current!, getData: () => ({ type: "placeholder" }) }), []);

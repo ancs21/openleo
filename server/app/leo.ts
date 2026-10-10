@@ -1,5 +1,4 @@
-// Leo: the built-in assistant of each board. People chat with it to manage the board (cards, lists, fields,
-// which agent works on what); it hands the real work to the board's agents. It has no computer of its own.
+// Leo: each board's built-in assistant. It manages the board and hands real work to the board's agents; it has no computer.
 import { Type } from "@earendil-works/pi-ai";
 import { FIELD_TYPES } from "../../shared/fields";
 import { LEO, type AgentDef } from "../../shared/types";
@@ -17,12 +16,10 @@ Do what the user asks, nothing more:
 Refer to cards by number (#12). Keep replies short and plain.
 You can't delete cards, lists or fields: tell the user to do that themselves.`;
 
-/** Leo as an agent definition (it isn't stored with the user's agents). */
 export const leoDef = (): AgentDef => ({ name: LEO, description: "Manages this board", ...leoSettings(), instructions: INSTRUCTIONS, subagents: [], mcp: [] });
 
 const text = (t: string) => ({ content: [{ type: "text" as const, text: t }], details: {} });
 
-/** Everything on the board, as text: lists, fields, cards and the agents there are. */
 function describe(bid: string, agents: AgentDef[]) {
   const b = getBoard(bid);
   const fields = b.fields ?? [];
@@ -45,10 +42,7 @@ function describe(bid: string, agents: AgentDef[]) {
 /** The board right now, for Leo's context on every turn (so it doesn't have to read it first). */
 export const boardNow = (bid: string, agents: AgentDef[]) => `The board right now:\n${describe(bid, agents)}`;
 
-/**
- * Reading the board and adding or changing cards: Leo's, and every agent's on its own board. Without `run` (an agent),
- * new cards don't start the list's agent, so agents can't set each other off in a loop.
- */
+/** Board tools for Leo and agents. Without `run` (an agent), new cards don't start the list's agent, so agents can't set each other off in a loop. */
 export function cardTools(bid: string, agents: () => AgentDef[], run?: (cid: string, agent: string) => void) {
   return [
     defineTool({
@@ -113,7 +107,6 @@ export function cardTools(bid: string, agents: () => AgentDef[], run?: (cid: str
 
 type NewAgent = { name: string; title?: string; description: string; instructions: string };
 type AgentPatch = { title?: string; description?: string; instructions?: string };
-/** The tools Leo uses on board `bid`. `run` starts an agent on a card; `agents` lists the board's agents; `create` saves a new one, `update` changes one. */
 export function leoTools(bid: string, { run, agents, create, update }: {
   run: (cid: string, agent: string) => void; agents: () => AgentDef[];
   create: (a: NewAgent) => Promise<AgentDef>; update: (name: string, patch: AgentPatch) => Promise<AgentDef>;

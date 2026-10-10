@@ -1,8 +1,5 @@
-// Sign in with ChatGPT for open-source local apps:
-// https://developers.openai.com/siwc/token-sharing-open-source/sign-in
-// We own login (OpenLeo name, client reuse, ID-token validation). Each account (tenant) has its own
-// registration (<tenant>/chatgpt.json) and its tokens in its vault, in pi's credential format under "openai",
-// so pi-ai's built-in refresh and Responses requests keep working.
+// Sign in with ChatGPT. Each tenant has its own registration (<tenant>/chatgpt.json) and its tokens in its vault,
+// in pi's credential format under "openai", so pi-ai's built-in token refresh keeps working.
 import { rm } from "node:fs/promises";
 import { writePrivate } from "./private-file";
 import { piAuth, tenantCredentials } from "./credentials";
@@ -19,17 +16,14 @@ const PLAN_SCOPE = "chatgpt.tokens.use.direct";
 const SCOPE = `openid profile email offline_access resource.invoke ${PLAN_SCOPE}`;
 const EXPIRY_MARGIN_MS = 3 * 60_000; // same margin pi uses, so a request never starts on a dying token
 const PENDING_TTL_MS = 10 * 60_000;
-// A hosted OpenLeo (not on this machine) uses an OAuth client registered with OpenAI for its public
-// callback; local installs register themselves (dynamic_agent_client) with a 127.0.0.1 callback.
+// Hosted installs use a pre-registered client for their public callback; local ones register themselves.
 const FIXED_CLIENT_ID = CHATGPT_CLIENT_ID;
 
 const DIR = `${process.env.HOME}/.config/openleo`;
 const HOST_ID_FILE = `${DIR}/host-id`;
 const LEGACY_REG = `${DIR}/chatgpt.json`; // the single registration from before accounts had their own
 
-// Account registration, kept across sign-outs (docs: retain the account/client mapping). id_token is cleared on sign-out.
-// `app_name` is the name ChatGPT shows for this registration ("Connect <name> to ChatGPT"); one made under an
-// older app name is replaced on the next sign-in.
+// Kept across sign-outs (only id_token is cleared). One made under an older `app_name` is replaced on next sign-in.
 type Registration = { client_id: string; sub: string; email?: string; id_token?: string; app_name?: string };
 
 const b64url = (b: ArrayBuffer | Uint8Array) => Buffer.from(b instanceof Uint8Array ? b : new Uint8Array(b)).toString("base64url");
@@ -60,15 +54,10 @@ const oidc = () => (discovery ??= fetch(`${ISSUER}/.well-known/openid-configurat
   return r.json() as Promise<Oidc>;
 })).catch((e) => ((discovery = null), Promise.reject(e)));
 
-// ---- ID token validation (RS256 against OpenAI's JWKS) ----
-
 export type Jwks = { keys: ({ kid?: string } & Record<string, unknown>)[] };
 export type IdClaims = { iss: string; sub: string; aud: string | string[]; exp: number; nonce?: string; email?: string; email_verified?: boolean };
 
-/**
- * The account key: the verified email, lowercased. ChatGPT's `sub` is per app registration (it changes when
- * OpenLeo registers again, e.g. after a rename), and the token carries no other stable user id.
- */
+/** The verified email, lowercased: `sub` changes whenever OpenLeo registers again, and there's no other stable id. */
 export function accountKey(claims: Pick<IdClaims, "email" | "email_verified">) {
   const email = claims.email?.trim().toLowerCase();
   if (!email || claims.email_verified !== true) throw new Error("Your ChatGPT account needs a verified email to sign in to OpenLeo.");
@@ -95,8 +84,6 @@ export async function verifyIdToken(token: string, opts: { jwks: Jwks; issuer: s
   return c;
 }
 
-// ---- Login ----
-
 // `hint`: the account this browser signed in as last time (its registration is reused); `legacy`: the old shared one.
 type Pending = { verifier: string; nonce: string; redirectUri: string; clientId: string | null; created: number; next: string; hint?: string; legacy?: Registration };
 // Kept on globalThis so a sign-in that's under way survives the dev server reloading code (bun --hot).
@@ -105,8 +92,7 @@ const pending = (g.openleoSignIns ??= new Map<string, Pending>());
 
 let lastError: string | undefined;
 
-/** `next` is the app path to return to after signing in; `hint` the account this browser used last. Returns the
- * ChatGPT sign-in URL. */
+/** Returns the sign-in URL. `next`: app path to return to; `hint`: the account this browser used last. */
 export async function startLogin(redirectUri: string, next = "/", hint?: string) {
   for (const [k, v] of pending) if (Date.now() - v.created > PENDING_TTL_MS) pending.delete(k);
   const own = hint ? await readReg(hint) : null;
@@ -199,10 +185,7 @@ async function store(s: SignIn) {
   }
 }
 
-/**
- * Finish sign-in and go back into the app. `admit` decides whether the account may sign in (throws if not)
- * and returns the cookies that start its session; `forget` returns the cookie clearing a stale account hint.
- */
+/** `admit` throws if the account may not sign in, else returns its session cookies; `forget` clears a stale hint. */
 export async function handleCallback(url: URL, admit: (account: string, email?: string) => Promise<string[]>, forget: () => string) {
   const to = (path: string, cookies: string[] = []) => {
     const headers = new Headers({ location: path, "cache-control": "no-store" });
@@ -222,16 +205,13 @@ export async function handleCallback(url: URL, admit: (account: string, email?: 
   }
 }
 
-// ---- Status / sign-out ----
-
 export async function status(tenant: string) {
   const cred = await tenantCredentials(tenant).read("openai");
   const reg = await readReg(tenant);
   return { signedIn: cred?.type === "oauth", email: reg?.email, pending: pending.size > 0, error: lastError };
 }
 
-// Revoke the refresh token, then clear tokens locally. Keeps client_id/sub/email for the next sign-in.
-/** Revoke a refresh token at OpenAI (retrying server errors); true when OpenAI confirmed it. */
+/** Retries server errors; true when the revocation was confirmed. */
 async function revoke(cred: { refresh: string; clientId: string }) {
   for (let i = 0; i < 3; i++) {
     try {

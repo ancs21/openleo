@@ -1,6 +1,5 @@
-// Compaction: when a conversation grows near the model's context window, older turns are summarized by
-// the same model and replaced with one summary message. The last few user turns stay verbatim. The
-// summary is saved in the transcript (marked `compacted`), so it happens once, not on every request.
+// Near the context window, older turns are summarized into one message; the last few user turns stay verbatim.
+// The summary is saved in the transcript (marked `compacted`), so it happens once, not on every request.
 import type { Agent } from "@earendil-works/pi-agent-core";
 import { models } from "../infra/runtime";
 
@@ -29,7 +28,6 @@ export function splitPoint(messages: Msg[], keepTurns = KEEP_TURNS) {
   return starts.length > keepTurns ? starts[starts.length - keepTurns]! : 0;
 }
 
-/** Plain-text transcript for the summarizer; long tool outputs are clipped. */
 export function transcriptText(messages: Msg[]) {
   return messages.map((m) => {
     const body = blocks(m).map((b) =>
@@ -50,10 +48,7 @@ Write a concise summary with these parts, skipping any that are empty:
 - Progress: what is done, what is in progress, and the next steps.
 Keep exact details; drop pleasantries and repetition. Write in the language of the conversation.`;
 
-/**
- * Summarize everything before the last few turns into one message. `force` compacts regardless of size.
- * Returns false when there is nothing to compact.
- */
+/** Summarize all but the last few turns into one message (`force`: regardless of size). False when there is nothing to compact. */
 export async function compact(agent: Agent, { force = false } = {}) {
   const messages = agent.state.messages as Msg[];
   const model = agent.state.model;

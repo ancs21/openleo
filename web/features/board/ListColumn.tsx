@@ -110,7 +110,6 @@ export function ListColumn({ list, cards, matches, onOpenTask }: {
   );
 }
 
-/** A list's icon (picked from its title), or a plain page while it has none. */
 export const ListIcon = ({ icon, className = "size-3.5" }: { icon?: string; className?: string }) => icon
   ? <AgentIcon icon={icon} className={`${className} text-ink-2`} />
   : <Icon className={`${className} shrink-0 text-ink-2`}>{glyphs.file}</Icon>;

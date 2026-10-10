@@ -11,7 +11,6 @@ import { useApp } from "../../stores/app-store";
 import { empty, Group, Info, inputCls, Label, LinkButton, Section } from "../../components/form";
 import { titleOf } from "./templates";
 
-/** A skill or app this agent has: name, info, extra controls, and Remove (from this agent only). */
 const Attached = ({ label, info, extra, onRemove }: { label: string; info?: string; extra?: ReactNode; onRemove: () => void }) => (
   <div className="flex min-h-9 items-center gap-2">
     <span className="min-w-0 truncate text-[13.5px]">{label}</span>
@@ -22,7 +21,7 @@ const Attached = ({ label, info, extra, onRemove }: { label: string; info?: stri
   </div>
 );
 
-/** Search field: icon, text, and a clear button once there's text. The focus ring sits inside so the dialog edge can't clip it. */
+/** The focus ring sits inside so the dialog edge can't clip it. */
 export const SearchBox = ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) => (
   <label className="flex h-9 shrink-0 items-center gap-2 rounded-control bg-field px-3 text-ink-3 shadow-inset-field focus-within:ring-2 focus-within:ring-accent/40 focus-within:ring-inset">
     <Icon>{glyphs.search}</Icon>
@@ -42,13 +41,10 @@ export const NewButton = ({ children, onClick }: { children: ReactNode; onClick:
 export const card = "flex h-full items-start gap-3 rounded-card border border-line p-3";
 export const grid = "grid auto-rows-min grid-cols-2 gap-2.5 max-sm:grid-cols-1";
 
-// ---- Connected apps ----
-
 const status = (s: McpServerInfo) =>
   s.error ? <span title={s.error} className="max-w-48 truncate text-[12px] text-red">Can't connect</span>
   : <span className="text-[12px] text-ink-3">{s.tools.length} {s.tools.length === 1 ? "action" : "actions"}</span>;
 
-/** Connected apps: MCP servers whose tools the agent can use. */
 export function AppsSection({ selected, onToggle }: { selected: string[]; onToggle: (name: string, on?: boolean) => void }) {
   const servers = useApp((s) => s.mcp);
   const [picking, setPicking] = useState(false);
@@ -179,7 +175,6 @@ function AppPicker({ selected, onAdd, onConnect, onClose }: {
   );
 }
 
-/** Connect an app: a catalog app needs only its key (when it takes one); a custom app needs its address or command. */
 function AppForm({ app, onDone }: { app?: CatalogApp; onDone: (savedName?: string) => void }) {
   const [kind, setKind] = useState<"url" | "command">("url");
   const [name, setName] = useState(app ? toId(app.slug) : "");

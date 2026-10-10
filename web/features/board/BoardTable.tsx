@@ -17,7 +17,6 @@ const head = `${cellLine} flex min-w-0 items-center px-3 py-2`;
 const body = `${cellLine} flex min-w-0 items-center px-3 py-1.5`;
 const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
 
-/** The board as a table: a row per card, a column per field (edited in place). Chips above filter it by list. */
 export function BoardTable({ matches, onOpenTask }: { matches: (c: TaskCard) => boolean; onOpenTask: (id: string) => void }) {
   const { board, moveCard, addTask } = useBoard();
   const agents = useApp((s) => s.agents);

@@ -1,14 +1,13 @@
 // Web sources: an inline chip for cited links, and the "N sources" toggle + list under a reply.
-// Avatars are site icons served by OpenLeo (server/infra/favicon.ts), falling back to a coloured letter.
 import { useState } from "react";
 
-const SHOWN = 8; // sources listed before "Show all"
+const SHOWN = 8;
 
 export const hostOf = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return url; } };
 
 const hue = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
 
-/** The site's icon (fetched and cached by OpenLeo's server), or a coloured letter when it has none. */
+/** The site's icon via the server, or a coloured letter when it has none. */
 export function SiteAvatar({ url, size = "size-3.5", round = "rounded-[4px]", ring = false }: { url: string; size?: string; round?: string; ring?: boolean }) {
   const host = hostOf(url);
   const [failed, setFailed] = useState(false);
@@ -24,7 +23,6 @@ export function SiteAvatar({ url, size = "size-3.5", round = "rounded-[4px]", ri
   );
 }
 
-/** Inline citation chip: avatar + label, opens the source. */
 export const SourceChip = ({ href, label }: { href: string; label: string }) => (
   <a href={href} target="_blank" rel="noopener noreferrer" title={href}
     className="mx-0.5 inline-flex h-4.5 translate-y-[-1px] items-center gap-1 rounded-[5px] bg-inset px-[3px] align-middle font-mono text-[10.5px] text-ink-2 no-underline shadow-hairline transition-colors duration-150 hover:bg-hover hover:text-ink">
@@ -33,7 +31,6 @@ export const SourceChip = ({ href, label }: { href: string; label: string }) => 
   </a>
 );
 
-/** Avatar stack + "N sources": toggles the SourceList (the reply footer holds both). */
 export const SourceStack = ({ urls, open, onToggle }: { urls: string[]; open: boolean; onToggle: () => void }) => (
   <button type="button" aria-expanded={open} onClick={onToggle}
     className="flex items-center gap-1.5 rounded-[6px] px-1 py-0.5 text-left transition-colors duration-150 hover:bg-hover">
@@ -44,7 +41,6 @@ export const SourceStack = ({ urls, open, onToggle }: { urls: string[]; open: bo
   </button>
 );
 
-/** The pages the agent searched or read, sliding open under the reply. */
 export function SourceList({ urls, open }: { urls: string[]; open: boolean }) {
   const [all, setAll] = useState(false);
   return (

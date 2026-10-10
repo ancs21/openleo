@@ -2,7 +2,6 @@ import { Button } from "../../components/Button";
 import { Modal } from "../../components/Modal";
 import { USAGE_URL, useApp } from "../../stores/app-store";
 
-/** First-sign-in confirmation and usage-limit dialogs (driven by app-store flags). */
 export function PlanDialogs() {
   const { welcomeOpen, limitOpen, setWelcomeOpen, setLimitOpen } = useApp();
   return (

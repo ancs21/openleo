@@ -32,7 +32,6 @@ function SummaryDivider({ text }: { text: string }) {
   );
 }
 
-/** Chat with one agent in one conversation (addressed by url). */
 export function ChatPanel({ agent, url, onNew, compact = false, emptyText, board = "main", assistant, placeholder }: {
   agent: string; url: string; onNew: () => void;
   /** a built-in assistant (Leo): its model is kept apart from the user's agents, and it has no computer */
@@ -69,7 +68,7 @@ export function ChatPanel({ agent, url, onNew, compact = false, emptyText, board
   };
   const commands: Command[] = [
     { key: "new", name: "/new", desc: "Start a new chat", run: onNew },
-    ...(busy ? [{ key: "stop", name: "/stop", desc: "Stop the current run", run: () => void stop() }] : []), // only while there's a run to stop
+    ...(busy ? [{ key: "stop", name: "/stop", desc: "Stop the current run", run: () => void stop() }] : []),
     ...(box?.sandboxed ? [{ key: "desktop", name: "/desktop", desc: "Open the sandbox desktop", run: () => void openDesktop(board) }] : []),
     { key: "compact", name: "/compact", desc: "Summarize older messages to free up space", run: () => void compactHistory() },
     { key: "summarize", name: "/summarize", desc: "Digest the conversation so far", insert: "Summarize our conversation so far in a few bullets." },
@@ -93,7 +92,6 @@ export function ChatPanel({ agent, url, onNew, compact = false, emptyText, board
     if (el && pinned.current) el.scrollTop = el.scrollHeight;
   }, [messages]);
   useEffect(() => { if (error && /subscription_sharing_usage_(limit_exceeded|unavailable)/.test(error)) setLimitOpen(true); }, [error, setLimitOpen]);
-  // Sound the end of a run: soft "page" when the reply lands, "release" on error.
   const wasBusy = useRef(false);
   useEffect(() => {
     if (wasBusy.current && !busy) play(status === "error" ? "release" : "page");

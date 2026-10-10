@@ -3,11 +3,7 @@ import { Button } from "../../components/Button";
 import { Spinner } from "../../components/motion";
 import chatgptLogo from "../../assets/chatgpt-logo-white.svg";
 
-/**
- * "Continue with ChatGPT", as OpenAI's Sign in with ChatGPT guidelines show it: the white ChatGPT logo
- * (official asset, unmodified) left of the label, on a dark button. While `busy`, a spinner takes the
- * logo's place and the button is disabled.
- */
+/** Follows OpenAI's sign-in button guidelines (logo unmodified); a spinner replaces the logo while `busy`. */
 export function ChatGPTButton({ className = "", children = "Continue with ChatGPT", busy = false, disabled, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { busy?: boolean }) {
   return (
     <Button variant="chatgpt" type="button" className={`gap-2 ${className}`} disabled={busy || disabled} aria-busy={busy} {...props}>

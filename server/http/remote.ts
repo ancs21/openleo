@@ -1,6 +1,5 @@
-// Opening OpenLeo on your other devices (Tailscale): a second listener on this computer's Tailscale addresses, with
-// HTTPS, serving the same routes. Each visit is tagged with the account Tailscale says it's from; the owner's own
-// devices are let in as the owner (see guard.ts). Only the owner, on this computer, can turn it on or off.
+// The same routes over HTTPS on this computer's Tailscale addresses; the owner's devices count as the owner (guard.ts).
+// Only the owner, on this computer, can turn it on or off.
 import { issueCert, noteVisitor, saveShared, self, setListening, tailnetStatus, wantShared, whois } from "../infra/tailnet";
 import { onThisMac, viewerSocket } from "./computer";
 import { err, safe } from "./guard";
@@ -14,7 +13,7 @@ let listeners: Bun.Server<undefined>[] = [];
 let address: string | undefined;
 let renewal: ReturnType<typeof setInterval> | undefined;
 
-/** The same routes, each first noting who the visit is from. Visits from this computer's own addresses count as no one. */
+/** Visits from this computer's own addresses count as no one. */
 function identified(all: Routes, own: string[]): Routes {
   const tag = (h: Handler): Handler => async (req, srv) => {
     const ip = (srv.requestIP(req)?.address ?? "").replace(/^::ffff:/, "");
@@ -39,7 +38,7 @@ function stop() {
   setListening(undefined);
 }
 
-/** Listen on the Tailscale addresses with a fresh certificate. Port 3443: Tailscale answers 443 on its addresses itself. */
+/** Port 3443: Tailscale answers 443 on its addresses itself. */
 async function start() {
   stop();
   const me = await self();
@@ -58,7 +57,6 @@ async function start() {
   renewal = setInterval(() => void start().catch(() => {}), 24 * 3600_000); // certificates last 90 days; renew early
 }
 
-/** At startup: remember the routes, and share again if the owner left it on. */
 export async function serveOnTailnet(all: Routes) {
   routes = all;
   if (await wantShared()) await start().catch((e) => console.warn(`Tailscale sharing is on but couldn't start: ${(e as Error).message}`));

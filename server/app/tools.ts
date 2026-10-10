@@ -1,5 +1,4 @@
-// Built-in tools a no-code agent can switch on. By default they run inside the cua sandbox (src/sandbox.ts);
-// with OPENLEO_SANDBOX=off they run on the host, with file tools confined to ./workspace.
+// Built-in tools. They run in the board's computer; with OPENLEO_SANDBOX=off they run on the host, file tools confined to ./workspace.
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import { defineTool } from "../infra/runtime";
 import { StringEnum } from "@earendil-works/pi-ai/utils/typebox-helpers";
@@ -76,7 +75,7 @@ export const tools: Record<string, AgentTool<any>> = {
   }),
 };
 
-// Computer use: only the sandbox has a desktop (XFCE, 1280x800). OpenAI reserves the tool name "computer".
+// Only the sandbox has a desktop (1280x800). Not named "computer": a model provider reserves that name.
 if (SANDBOXED) tools.desktop = defineTool({
   name: "desktop",
   label: "Computer",
@@ -109,7 +108,6 @@ if (SANDBOXED) tools.desktop = defineTool({
   },
 });
 
-/** In a task's conversation: the agent fills in the card's fields, which show on the board. */
 export const cardFieldsTool = (cid: string) => defineTool({
   name: "set_card_fields",
   label: "Card fields",

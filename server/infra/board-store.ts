@@ -1,5 +1,4 @@
-// Where boards are kept: <tenant>/boards/<id>.json, read once per account and written back after each change.
-// Each board has its own computer (infra/sandbox.ts), named here.
+// Boards are kept in <tenant>/boards/<id>.json, read once per account and written back after each change.
 import { existsSync, readFileSync, readdirSync, renameSync, rmSync } from "node:fs";
 import type { Board, BoardInfo } from "../../shared/types";
 import { afterRestart, freshBoard, MAIN_BOARD, welcome } from "../core/board";
@@ -8,10 +7,8 @@ import { currentTenant, dataDir } from "./tenant";
 const file = (bid: string) => `${dataDir("boards")}/${bid}.json`;
 const SANDBOX_NAME = "openleo"; // computers are named openleo-<account>-<board>
 
-/** A new board for this account, with its computer's name. */
 export const newBoard = (title: string, bid: string) => freshBoard(title, `${SANDBOX_NAME}-${currentTenant().slice(0, 8)}-${bid}`);
 
-/** Boards per tenant, loaded from disk the first time the tenant is used. A new account's main board gets the welcome cards. */
 const byTenant = new Map<string, Map<string, Board>>();
 function boards() {
   const tenant = currentTenant();
@@ -29,13 +26,11 @@ function boards() {
 }
 
 let saving = Promise.resolve();
-/** Write a board back to disk (in order, after earlier writes). */
 export function saveBoard(bid: string) {
   const path = file(bid), board = boards().get(bid); // resolved now: the write may run after this request's context ends
   if (board) saving = saving.then(() => Bun.write(path, JSON.stringify(board, null, 2)).then(() => {}));
 }
 
-/** Put a board in place of the stored one and save it. */
 export function setBoard(bid: string, board: Board) {
   boards().set(bid, board);
   saveBoard(bid);
@@ -58,11 +53,11 @@ export function removeBoard(bid: string) {
   rmSync(file(bid), { force: true });
 }
 
-/** The board a card lives on (card ids are unique across boards), so a card's chat runs in that board's computer. */
+/** Card ids are unique across boards. */
 export function boardOfCard(cid: string) {
   for (const [bid, b] of boards()) if (b.cards[cid]) return bid;
   return undefined;
 }
 
-/** The sandbox name of a board's computer. Boards from before tenants keep their original names (and files). */
+/** Boards from before tenants keep their original computer names (and files). */
 export const computerOf = (bid: string) => getBoard(bid).computer ?? (bid === MAIN_BOARD ? SANDBOX_NAME : `${SANDBOX_NAME}-${bid}`);

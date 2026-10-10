@@ -2,7 +2,6 @@ import { Button } from "../../components/Button";
 import { ChatGPTButton } from "./ChatGPTButton";
 import { USAGE_URL, useApp } from "../../stores/app-store";
 
-/** Sign-in card for using a ChatGPT plan with OpenAI models. */
 export function ChatGPTCard() {
   const chatgpt = useApp((s) => s.chatgpt);
   const signIn = useApp((s) => s.signIn);

@@ -1,6 +1,5 @@
-// The OpenLeo desktop app (macOS, Windows, Linux): runs the OpenLeo server (compiled into the app, see scripts/build-server.ts) with its data
-// in the app's data folder, shows it in a window, and keeps it running from the menu bar when the window closes,
-// so schedules and agents keep working in the background. On Windows and Linux the tray icon does the same.
+// The OpenLeo desktop app: runs the bundled server with its data in the app's data folder, shows it in a window,
+// and stays in the menu bar (tray on Windows and Linux) after the window closes so schedules keep running.
 import { ApplicationMenu, BrowserWindow, PATHS, Tray, Updater, Utils } from "electrobun/main";
 import { delimiter, join } from "node:path";
 
@@ -40,7 +39,6 @@ function openWindow() {
   win = new BrowserWindow({
     title: "OpenLeo", url: APP_URL, frame: { width: 1320, height: 860, x: 120, y: 80 },
   });
-  // Links that open a new window (target=_blank) go to the default browser.
   (win.webview.on as (name: string, handler: (e: unknown) => void) => void)("new-window-open", (e: any) => {
     const detail = e?.data?.detail;
     const url = typeof detail === "string" ? detail : detail?.url;
@@ -54,7 +52,7 @@ function quit() {
   Utils.quit();
 }
 
-// Standard menus, so ⌘C / ⌘V / ⌘Q and window shortcuts work inside the app (Windows and Linux webviews have them built in).
+// Standard menus so ⌘C / ⌘V / ⌘Q work (Windows and Linux webviews have them built in).
 if (MAC) ApplicationMenu.setApplicationMenu([
   { submenu: [{ role: "about" }, { label: "Check for Updates…", action: "check-update" }, { type: "divider" }, { role: "hide" }, { role: "hideOthers" }, { role: "showAll" }, { type: "divider" }, { label: "Quit OpenLeo", action: "quit", accelerator: "q" }] },
   { label: "Edit", submenu: [{ role: "undo" }, { role: "redo" }, { type: "divider" }, { role: "cut" }, { role: "copy" }, { role: "paste" }, { role: "selectAll" }] },
@@ -65,10 +63,9 @@ ApplicationMenu.on("application-menu-clicked", (e: any) => {
   else if (e.data?.action === "check-update") void checkForUpdate(true);
 });
 
-// Menu bar (tray on Windows and Linux): reopen the window, open in a browser, or quit (closing the window keeps
-// OpenLeo running). On a Mac the icon is a template image that macOS colours for a light or dark menu bar.
+// On a Mac the icon is a template image that macOS colours for a light or dark menu bar.
 const tray = new Tray({ image: join(PATHS.RESOURCES_FOLDER, "app", MAC ? "tray.png" : "tray-color.png"), template: MAC, width: 16, height: 16 });
-let readyVersion: string | undefined; // a downloaded update, waiting for a restart
+let readyVersion: string | undefined;
 function setTrayMenu() {
   tray.setMenu([
     { type: "normal", label: "Open OpenLeo", action: "open" },
@@ -86,13 +83,12 @@ tray.on("tray-clicked", (e: any) => {
   const action = e.data?.action;
   if (action === "browser") Utils.openExternal(APP_URL);
   else if (action === "quit") quit();
-  else if (action === "update") void Updater.applyUpdate(); // quits (which stops the server), swaps in the new version, reopens
+  else if (action === "update") void Updater.applyUpdate();
   else if (action === "check-update") void checkForUpdate(true);
-  else openWindow(); // the "open" item, or a click on the icon itself
+  else openWindow();
 });
 
-// Updates: look for a newer release at start and every 6 hours, download it quietly, then offer a restart in the menu.
-// Asked for from the menu (`asked`), it also says how it went, and offers to restart right away.
+// Runs at start and every 6 hours; `asked` (from the menu) also reports the result and offers a restart.
 async function checkForUpdate(asked = false) {
   const problem = readyVersion ? undefined : await prepareUpdate();
   if (!asked) return;

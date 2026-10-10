@@ -13,7 +13,6 @@ import { boardParam, err, inComputer, safe } from "./guard";
 export const boardRoutes = {
   "/api/boards": {
     GET: () => Response.json(listBoards()),
-    // A new board gets its own computer right away (computers stay on).
     POST: safe(async (req) => {
       checkBoards(listBoards().length);
       const info = createBoard(String(((await req.json()) as any).title ?? ""));
@@ -35,7 +34,7 @@ export const boardRoutes = {
       renameBoard(boardParam(req.params.board), String(((await req.json()) as any).title ?? ""));
       return Response.json(listBoards());
     }),
-    // Deleting a board pauses its computer; the computer's files are kept.
+    // Pauses the board's computer; its files are kept.
     DELETE: safe(async (req: Bun.BunRequest<"/api/boards/:board">) => {
       const bid = boardParam(req.params.board);
       deleteBoard(bid);
@@ -45,7 +44,7 @@ export const boardRoutes = {
       return Response.json(listBoards());
     }),
   },
-  // Custom fields and values are server-owned (an agent may fill them in mid-run), so they change here, not in the board PUT.
+  // Fields are server-owned (an agent may fill them mid-run), so they change here, not in the board PUT.
   "/api/boards/:board/fields": {
     PUT: safe(async (req: Bun.BunRequest<"/api/boards/:board/fields">) => {
       const bid = boardParam(req.params.board);
@@ -53,7 +52,6 @@ export const boardRoutes = {
       return Response.json(getBoard(bid));
     }),
   },
-  // Agent-first setup: "a sales pipeline" -> the lists and fields it needs, added to the board.
   "/api/boards/:board/setup": {
     POST: safe(async (req: Bun.BunRequest<"/api/boards/:board/setup">) => {
       const bid = boardParam(req.params.board);
@@ -86,7 +84,6 @@ export const boardRoutes = {
       return Response.json({ on: !!on });
     }),
   },
-  // A board's notes, read from and written to its computer (starting it if it's off).
   "/api/boards/:board/notes": {
     GET: safe((req: Bun.BunRequest<"/api/boards/:board/notes">) => inComputer(req.params.board, readNotes), 503),
   },

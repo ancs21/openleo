@@ -1,7 +1,4 @@
-/**
- * Open a new tab for a URL we only get after an async call. The tab is opened synchronously
- * (inside the click) so popup blockers allow it, then pointed at the URL; closed again on error.
- */
+/** Opens the tab synchronously (inside the click) so popup blockers allow it, then points it at the async URL. */
 export async function openInNewTab(getUrl: () => Promise<string>) {
   const tab = window.open("", "_blank");
   try {
