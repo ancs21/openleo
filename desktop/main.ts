@@ -8,6 +8,7 @@ const PORT = 3000;
 const APP_URL = `http://127.0.0.1:${PORT}`;
 const SERVER_DIR = join(PATHS.RESOURCES_FOLDER, "app", "openleo");
 const MAC = process.platform === "darwin";
+const GOOGLE_SIGN_IN = "https://accounts.google.com/o/oauth2/";
 
 const isUp = () => fetch(`${APP_URL}/api/auth/config`).then((r) => r.ok, () => false);
 
@@ -43,6 +44,20 @@ function openWindow() {
     const detail = e?.data?.detail;
     const url = typeof detail === "string" ? detail : detail?.url;
     if (typeof url === "string" && /^https?:\/\//.test(url)) Utils.openExternal(url);
+  });
+  // Signing in with Google: OpenAI doesn't ask Google to show its account picker, so Google silently picks the
+  // account this window is signed in to. Such a request is held back and sent again with the picker asked for.
+  win.webview.setNavigationRules([`^${GOOGLE_SIGN_IN}*`, `${GOOGLE_SIGN_IN}*prompt=*`]);
+  (win.webview.on as (name: string, handler: (e: unknown) => void) => void)("will-navigate", (e: any) => {
+    // { url, allowed }, as an object or JSON text
+    let detail = e?.data?.detail;
+    if (typeof detail === "string") try { detail = JSON.parse(detail); } catch { return; }
+    const url = detail?.url;
+    // Only a request the rules held back: if it went through anyway, sending it again would load it twice.
+    if (detail?.allowed !== false || typeof url !== "string" || !url.startsWith(GOOGLE_SIGN_IN) || !URL.canParse(url)) return;
+    const pick = new URL(url);
+    pick.searchParams.set("prompt", "select_account");
+    win?.webview.loadURL(pick.toString());
   });
   win.on("close", () => { win = null; });
 }

@@ -23,8 +23,8 @@ const DIR = `${process.env.HOME}/.config/openleo`;
 const HOST_ID_FILE = `${DIR}/host-id`;
 const LEGACY_REG = `${DIR}/chatgpt.json`; // the single registration from before accounts had their own
 
-// Kept across sign-outs (only id_token is cleared). One made under an older `app_name` is replaced on next sign-in.
-type Registration = { client_id: string; sub: string; email?: string; id_token?: string; app_name?: string };
+// Kept across sign-outs. One made under an older `app_name` is replaced on next sign-in.
+type Registration = { client_id: string; sub: string; email?: string; app_name?: string };
 
 const b64url = (b: ArrayBuffer | Uint8Array) => Buffer.from(b instanceof Uint8Array ? b : new Uint8Array(b)).toString("base64url");
 const random = () => b64url(crypto.getRandomValues(new Uint8Array(32)));
@@ -115,15 +115,17 @@ export async function startLogin(redirectUri: string, next = "/", hint?: string)
     nonce,
     code_challenge: challenge,
     code_challenge_method: "S256",
+    // No account hints: OpenAI shows its account picker, so the person can always choose another account there.
+    prompt: "select_account",
   };
   if (!reuse && !FIXED_CLIENT_ID) params.agent_name_hint = APP_NAME; // new registrations only
-  if (reuse?.id_token) params.id_token_hint = reuse.id_token; // issued for that client: only valid when reusing it
-  if (reg?.email) params.login_hint = reg.email;
-  // The URL contains id_token_hint: never log it.
   return { url: `${AUTHORIZE_URL}?${new URLSearchParams(params)}` };
 }
 
-type SignIn = { account: string; sub: string; email?: string; next: string; clientId: string; idToken: string; cred: object; hint?: string; legacy?: Registration };
+/** Signing in again after another account was picked than the one `startLogin` was given. */
+type Retry = { redirectUri: string; next: string; hint: string };
+
+type SignIn = { account: string; sub: string; email?: string; next: string; clientId: string; cred: object; hint?: string; legacy?: Registration };
 
 /** Verify the callback and exchange the code. Nothing is stored yet: the caller admits the account first. */
 async function finishLogin(url: URL): Promise<SignIn> {
@@ -134,7 +136,7 @@ async function finishLogin(url: URL): Promise<SignIn> {
   if (Date.now() - p.created > PENDING_TTL_MS) throw new Error("Sign-in attempt expired. Start again.");
 
   const error = url.searchParams.get("error");
-  if (error === "access_denied") throw new Error("ChatGPT plan use wasn't enabled. You can try again any time.");
+  if (error === "access_denied") throw new Error("Sign-in was cancelled. If this ChatGPT account can't be used with OpenLeo, sign in again and choose another one.");
   if (error) throw new Error(`ChatGPT sign-in failed: ${error}`);
 
   const code = url.searchParams.get("code");
@@ -163,11 +165,15 @@ async function finishLogin(url: URL): Promise<SignIn> {
 
   // A reused registration belongs to one account: signing in as someone else with it is refused.
   const account = accountKey(claims);
-  if (p.hint && tenantId(account) !== p.hint) throw Object.assign(new Error("You signed in with a different ChatGPT account than this browser used before. Try again."), { switched: true });
+  if (p.hint && tenantId(account) !== p.hint) {
+    void revoke({ refresh: t.refresh_token, clientId }); // issued through the other account's registration: unused
+    const retry: Retry = { redirectUri: p.redirectUri, next: p.next, hint: tenantId(account) };
+    throw Object.assign(new Error("You signed in with a different ChatGPT account than this browser used before. Try again."), { retry });
+  }
   if (p.legacy && p.legacy.email?.trim().toLowerCase() !== account) throw new Error(`This OpenLeo is still set up for ${p.legacy.email ?? "another account"}. Sign in once with that account to finish setting it up.`);
 
   const cred = { type: "oauth", access: t.access_token, refresh: t.refresh_token, expires: Date.now() + t.expires_in * 1000 - EXPIRY_MARGIN_MS, clientId, scopes };
-  return { account, sub: claims.sub, email: claims.email, next: p.next, clientId, idToken: t.id_token, cred, hint: p.hint, legacy: p.legacy };
+  return { account, sub: claims.sub, email: claims.email, next: p.next, clientId, cred, hint: p.hint, legacy: p.legacy };
 }
 
 /** Keep an admitted account's tokens (vault) and registration; the old shared registration moves into it. */
@@ -178,7 +184,7 @@ async function store(s: SignIn) {
   await vaultSet(tenant, "pi/openai", JSON.stringify(s.cred)); // always this account's vault, never the shared pi login
   // Signed in through a new registration (e.g. after a rename): end the old connection's access.
   if (previous?.type === "oauth" && previous.clientId !== s.clientId) void revoke(previous);
-  await writePrivate(regFile(tenant), JSON.stringify({ client_id: s.clientId, sub: s.sub, email: s.email, id_token: s.idToken, app_name: APP_NAME } satisfies Registration, null, 2));
+  await writePrivate(regFile(tenant), JSON.stringify({ client_id: s.clientId, sub: s.sub, email: s.email, app_name: APP_NAME } satisfies Registration, null, 2));
   if (s.legacy) {
     await rm(LEGACY_REG, { force: true });
     await piAuth.delete("openai"); // the shared copy of these tokens
@@ -198,10 +204,17 @@ export async function handleCallback(url: URL, admit: (account: string, email?: 
     await store(signIn);
     return to(signIn.next, cookies);
   } catch (e) {
+    // Picked another account in OpenAI's account picker: sign in again as that account, with its own registration
+    // if it has one here, and stop treating the last account as this browser's.
+    const retry = (e as { retry?: Retry }).retry;
+    if (retry) {
+      try { return to((await startLogin(retry.redirectUri, retry.next, retry.hint)).url, [forget()]); }
+      catch (again) { e = again; }
+    }
     const msg = (e as Error).message;
     console.warn(`sign-in failed: ${msg}`);
     if (!(e as any).stray) lastError = msg; // forged/stale callbacks must not change app state
-    return to(`/login?error=${encodeURIComponent(msg)}`, (e as any).switched ? [forget()] : []);
+    return to(`/login?error=${encodeURIComponent(msg)}`);
   }
 }
 
@@ -236,7 +249,5 @@ export async function logout(tenant: string) {
     revoked = await revoke(cred);
     await creds.delete("openai");
   }
-  const reg = await readReg(tenant);
-  if (reg?.id_token) await writePrivate(regFile(tenant), JSON.stringify({ ...reg, id_token: undefined }, null, 2));
   return { ...(await status(tenant)), revoked };
 }
