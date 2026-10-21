@@ -49,43 +49,57 @@ test("accounts are keyed by verified email, so a new registration (new sub) is t
   expect(() => accountKey({ email_verified: true })).toThrow("verified email");
 });
 
-test("sign-in asks for the account picker, and picking another account signs in again as that account", async () => {
+test("signing in again reuses the account's registration; another account is chosen in OpenAI's account picker", async () => {
   const { handleCallback, startLogin } = await import("./siwc");
   const { tenantDir, tenantId } = await import("./tenant");
   const { writePrivate } = await import("./private-file");
   const { jwks, signer } = await keys();
 
-  // This browser signed in as ada before, so her registration is reused. Bob has signed in here before, too.
+  // Ada signed in here before: continuing as her reuses her registration and goes straight to her account.
   const ada = tenantId("ada@example.com");
   await writePrivate(`${tenantDir(ada)}/chatgpt.json`, JSON.stringify({ client_id: "oaiapp_ada", sub: "s", email: "ada@example.com", app_name: "OpenLeo" }));
-  await writePrivate(`${tenantDir(tenantId("bob@example.com"))}/chatgpt.json`, JSON.stringify({ client_id: "oaiapp_bob", sub: "b", email: "bob@example.com", app_name: "OpenLeo" }));
-  const first = new URL((await startLogin("http://127.0.0.1:3000/auth/callback", "/b/main", ada)).url);
-  expect(first.searchParams.get("prompt")).toBe("select_account");
-  expect(first.searchParams.get("client_id")).toBe("oaiapp_ada");
-  expect(first.searchParams.has("login_hint")).toBe(false);
-  expect(first.searchParams.has("id_token_hint")).toBe(false);
+  const again = new URL((await startLogin("http://127.0.0.1:3000/auth/callback", "/", ada)).url);
+  expect(again.searchParams.get("client_id")).toBe("oaiapp_ada");
+  expect(again.searchParams.get("login_hint")).toBe("ada@example.com");
+  expect(again.searchParams.has("prompt")).toBe(false); // her registration only lets her in
 
-  // In the picker, the person chooses bob instead.
+  // Another account: a new registration, so any account picked in OpenAI's account picker can sign in.
+  const start = new URL((await startLogin("http://127.0.0.1:3000/auth/callback", "/b/main")).url);
+  expect(start.searchParams.get("prompt")).toBe("select_account");
+  expect(start.searchParams.get("client_id")).toBe("dynamic_agent_client");
+  expect(start.searchParams.get("agent_name_hint")).toBe("OpenLeo");
+  expect(start.searchParams.has("login_hint")).toBe(false);
+
+  // In the picker, the person chooses bob; OpenAI registers OpenLeo for him.
   const realFetch = globalThis.fetch;
-  const revoked: string[] = [];
-  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+  globalThis.fetch = (async (input: string | URL | Request) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/.well-known/openid-configuration")) return Response.json({ issuer: "https://auth.openai.com", jwks_uri: "https://jwks.test", revocation_endpoint: "https://revoke.test" });
     if (url === "https://jwks.test") return Response.json(jwks);
-    if (url === "https://revoke.test") return revoked.push(String(init?.body)), new Response(null);
-    const idToken = await signer({ iss: "https://auth.openai.com", sub: "bob-1", aud: "oaiapp_ada", exp: Date.now() / 1000 + 600, nonce: first.searchParams.get("nonce"), email: "bob@example.com", email_verified: true });
+    const idToken = await signer({ iss: "https://auth.openai.com", sub: "bob-1", aud: "oaiapp_bob", exp: Date.now() / 1000 + 600, nonce: start.searchParams.get("nonce"), email: "bob@example.com", email_verified: true });
     return Response.json({ access_token: "a", refresh_token: "r", id_token: idToken, scope: "openid chatgpt.tokens.use.direct", expires_in: 3600 });
   }) as typeof fetch;
   try {
-    const callback = new URL(`http://127.0.0.1:3000/auth/callback?state=${first.searchParams.get("state")}&code=c`);
-    const res = await handleCallback(callback, async () => { throw new Error("must not admit bob with ada's registration"); }, () => "openleo_account=; Max-Age=0");
-    const again = new URL(res.headers.get("location")!);
-    expect(again.origin + again.pathname).toBe("https://auth.openai.com/api/accounts/authorize"); // no error page
-    expect(again.searchParams.get("client_id")).toBe("oaiapp_bob"); // bob's own registration
-    expect(again.searchParams.get("prompt")).toBe("select_account");
-    expect(res.headers.get("set-cookie")).toBe("openleo_account=; Max-Age=0"); // ada is no longer this browser's account
-    for (let i = 0; i < 50 && !revoked.length; i++) await Bun.sleep(10);
-    expect(revoked).toEqual([new URLSearchParams({ token: "r", token_type_hint: "refresh_token", client_id: "oaiapp_ada" }).toString()]); // bob's unused token
+    const admitted: string[] = [];
+    const callback = new URL(`http://127.0.0.1:3000/auth/callback?state=${start.searchParams.get("state")}&code=c&client_id=oaiapp_bob`);
+    const res = await handleCallback(callback, async (account) => (admitted.push(account), ["openleo_session=x"]));
+    expect(res.headers.get("location")).toBe("/b/main");
+    expect(admitted).toEqual(["bob@example.com"]);
+    expect((await Bun.file(`${tenantDir(tenantId("bob@example.com"))}/chatgpt.json`).json()).client_id).toBe("oaiapp_bob");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("a sign-in OpenAI refuses after consent (e.g. a free plan) says so", async () => {
+  const { handleCallback, startLogin } = await import("./siwc");
+  const start = new URL((await startLogin("http://127.0.0.1:3000/auth/callback")).url);
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async () => Response.json({ error: "invalid_grant" }, { status: 400 })) as unknown as typeof fetch;
+  try {
+    const callback = new URL(`http://127.0.0.1:3000/auth/callback?state=${start.searchParams.get("state")}&code=c&client_id=oaiapp_new`);
+    const res = await handleCallback(callback, async () => []);
+    expect(new URL(res.headers.get("location")!, "http://x").searchParams.get("error")).toContain("plan can't be used with OpenLeo");
   } finally {
     globalThis.fetch = realFetch;
   }

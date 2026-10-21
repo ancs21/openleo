@@ -17,7 +17,7 @@ export const safe = <R extends Request>(handler: (req: R) => Response | Promise<
   async (req: R) => { try { return await handler(req); } catch (e) { return err(e, e instanceof LimitError ? 429 : status); } };
 
 /** Routes anyone may call; the desktop relay is checked by the computer's ticket. Page files are public too. */
-const PUBLIC = new Set(["/api/me", "/api/auth/config", "/api/auth/chatgpt/login", "/auth/callback", "/sbproxy/*"]);
+const PUBLIC = new Set(["/api/me", "/api/auth/config", "/api/auth/remembered", "/api/auth/chatgpt/login", "/auth/callback", "/sbproxy/*"]);
 const METHODS = /^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$/;
 type Handler = (req: any, server: any) => Response | Promise<Response>;
 

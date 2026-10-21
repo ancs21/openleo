@@ -2,7 +2,7 @@
 import { startComputers } from "../app/computers";
 import { PUBLIC_ORIGIN, SANDBOXED } from "../infra/config";
 import { startMcp } from "../infra/mcp";
-import { accountOf, createSession, destroySession, forgetAccount, rememberAccount, sessionOf } from "../infra/sessions";
+import { accountOf, createSession, destroySession, rememberAccount, sessionOf } from "../infra/sessions";
 import * as siwc from "../infra/siwc";
 import { fromOwnersDevice, tailnetOrigin } from "../infra/tailnet";
 import { currentTenant, ensureTenant, inTenant, isOwner, listTenants, ownerTenant, tenantId } from "../infra/tenant";
@@ -17,13 +17,22 @@ export const authRoutes = {
   },
   // Public. Cookies are per host, so list every address sign-in may start from.
   "/api/auth/config": () => Response.json({ origin: PUBLIC_ORIGIN, origins: [PUBLIC_ORIGIN, tailnetOrigin()].filter(Boolean) }),
+  // Public: the account this browser signed in with last, offered on the login page. The cookie is HttpOnly, so
+  // only the browser that used the account sees its email.
+  "/api/auth/remembered": async (req: Request) => {
+    const tenant = remembered(req);
+    return Response.json(tenant ? { email: await siwc.accountEmail(tenant) } : {});
+  },
   "/api/auth/chatgpt/login": {
     POST: limited(async (req) => {
-      const next = String(((await req.json().catch(() => ({}))) as any).next ?? "/");
+      const body = (await req.json().catch(() => ({}))) as any;
+      const next = String(body.next ?? "/");
       const safeNext = /^\/(?!\/)[^\\]*$/.test(next) && !next.startsWith("/login") ? next : "/"; // same-app paths only
-      const hint = accountOf(req);
+      // Signing in again as a known account reuses its connection; any other account gets a new one.
+      const session = sessionOf(req);
+      const hint = session ? tenantId(session.account) : body.remembered ? remembered(req) : undefined;
       const from = req.headers.get("origin") === tailnetOrigin() ? tailnetOrigin()! : PUBLIC_ORIGIN;
-      return Response.json(await siwc.startLogin(`${from}/auth/callback`, safeNext, hint && listTenants().includes(hint) ? hint : undefined));
+      return Response.json(await siwc.startLogin(`${from}/auth/callback`, safeNext, hint));
     }),
   },
   // Signing out of ChatGPT ends the browser session too.
@@ -39,5 +48,10 @@ export const authRoutes = {
     if (!SANDBOXED && listTenants().length && !isOwner(tenant)) throw new Error("This OpenLeo runs tools directly on this computer, so only its owner can sign in.");
     if (ensureTenant(tenant)) inTenant(tenant, () => { startComputers(); void startMcp(); });
     return [await createSession(req, account, email), rememberAccount(req, tenant)];
-  }, () => forgetAccount(req))),
+  })),
 };
+
+function remembered(req: Request) {
+  const tenant = accountOf(req);
+  return tenant && listTenants().includes(tenant) ? tenant : undefined;
+}
