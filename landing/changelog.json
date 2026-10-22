@@ -1,8 +1,13 @@
 {
-  "next": [
-    "After signing out, you can sign in with another ChatGPT account: the login page offers the last account or \"Use another account\", and the desktop app lets you choose your Google account."
-  ],
+  "next": [],
   "releases": [
+    {
+      "version": "0.10.22",
+      "date": "2026-10-22",
+      "notes": [
+        "After signing out, you can sign in with another ChatGPT account: the login page offers the last account or \"Use another account\", and the desktop app lets you choose your Google account."
+      ]
+    },
     {
       "version": "0.10.11",
       "date": "2026-10-10",
