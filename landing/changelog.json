@@ -1,5 +1,7 @@
 {
-  "next": [],
+  "next": [
+    "After signing out, you can sign in with another ChatGPT account: the login page offers the last account or \"Use another account\", and the desktop app lets you choose your Google account."
+  ],
   "releases": [
     {
       "version": "0.10.11",
